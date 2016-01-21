@@ -1,0 +1,34 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 14
+VisualStudioVersion = 14.0.23107.0
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TransplanterLib", "TransplanterLib\TransplanterLib.csproj", "{EDAE3FA0-2F60-428F-A2A5-CD72F7BF2195}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Transplanter-GUI", "Transplanter-GUI\Transplanter-GUI.csproj", "{864FF3BE-05BF-4C02-86FD-3296B6B71E7A}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Transplanter-CLI", "Transplanter-CLI\Transplanter-CLI.csproj", "{7CEC0153-3108-4C39-8B53-4B376C28F61C}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{EDAE3FA0-2F60-428F-A2A5-CD72F7BF2195}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{EDAE3FA0-2F60-428F-A2A5-CD72F7BF2195}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{EDAE3FA0-2F60-428F-A2A5-CD72F7BF2195}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{EDAE3FA0-2F60-428F-A2A5-CD72F7BF2195}.Release|Any CPU.Build.0 = Release|Any CPU
+		{864FF3BE-05BF-4C02-86FD-3296B6B71E7A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{864FF3BE-05BF-4C02-86FD-3296B6B71E7A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{864FF3BE-05BF-4C02-86FD-3296B6B71E7A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{864FF3BE-05BF-4C02-86FD-3296B6B71E7A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7CEC0153-3108-4C39-8B53-4B376C28F61C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7CEC0153-3108-4C39-8B53-4B376C28F61C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7CEC0153-3108-4C39-8B53-4B376C28F61C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7CEC0153-3108-4C39-8B53-4B376C28F61C}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
