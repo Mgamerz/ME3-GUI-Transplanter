@@ -41,4 +41,5 @@ You can raise issues for this project on this github page or on [my modding foru
 
 ####License
 Uses some PCC related code from the open source [ME3Explorer Project](http://github.com/me3explorer/me3explorer).
-Licensed under GPL. All derivatives of this work must include their source code when distributed.
+
+This program is licensed under GPL. All derivatives of this work must include their source code when distributed.
