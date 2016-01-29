@@ -4,6 +4,9 @@ using CommandLine.Text;
 using System.IO;
 using static TransplanterLib.TransplanterLib;
 
+/// <summary>
+/// Transplanter CLI is the command line interface for TransplanterLib
+/// </summary>
 namespace Transplanter_CLI
 {
     class Options
@@ -228,21 +231,6 @@ namespace Transplanter_CLI
             //Console.WriteLine("Press Enter to exit");
             //Console.ReadLine();
             Environment.Exit(code);
-        }
-
-        private static bool checkInputFile(string inputFile)
-        {
-            return File.Exists(inputFile);
-        }
-
-        private static bool checkOutputFile(string transplantFile)
-        {
-            throw new NotImplementedException();
-        }
-
-        private static void createOutputFolder(string outputFolder)
-        {
-            throw new NotImplementedException();
         }
     }
 }

@@ -122,9 +122,9 @@
             this.statusLabel.AutoSize = true;
             this.statusLabel.Location = new System.Drawing.Point(12, 123);
             this.statusLabel.Name = "statusLabel";
-            this.statusLabel.Size = new System.Drawing.Size(165, 13);
+            this.statusLabel.Size = new System.Drawing.Size(168, 13);
             this.statusLabel.TabIndex = 10;
-            this.statusLabel.Text = "Select source and desination files";
+            this.statusLabel.Text = "Select source and destination files";
             // 
             // srcFileChooser
             // 

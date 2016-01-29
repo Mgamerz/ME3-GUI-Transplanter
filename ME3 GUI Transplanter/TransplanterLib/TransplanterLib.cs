@@ -31,6 +31,11 @@ namespace TransplanterLib
             return output;
         }
 
+        /// <summary>
+        /// Replaces the data for an export with the data for a SWF (GFX) file.
+        /// </summary>
+        /// <param name="ent">Export Entry to update data for</param>
+        /// <param name="swf_path">SWF file to use as new data. This technically will work with any file.</param>
         static void replace_swf_file(PCCObject.ExportEntry ent, string swf_path)
         {
             byte[] swf_file = File.ReadAllBytes(swf_path);
@@ -111,6 +116,11 @@ namespace TransplanterLib
             }
         }
 
+        /// <summary>
+        /// Recursively finds pcc files and extracts gfx files from them. If outputfolder is specified, it will place them into that folder relative to the inputfolder <> pcc file.
+        /// </summary>
+        /// <param name="folder">Base folder to start scanning from</param>
+        /// <param name="outputfolder">Output folder to place gfx files into. The difference between each pcc file and the input folder directories will be used to create its structure.</param>
         public static void extractAllGFxMoviesFromFolder(string folder, string outputfolder = null)
         {
             string[] files = Directory.GetFiles(folder, "*.pcc*", SearchOption.AllDirectories);
@@ -190,6 +200,12 @@ namespace TransplanterLib
             }
         }
 
+        /// <summary>
+        /// Formats arguments as a string
+        /// </summary>
+        /// <param name="filename">EXE file</param>
+        /// <param name="arguments">EXE arguments</param>
+        /// <returns></returns>
         public static string Format(string filename, string arguments)
         {
             return "'" + filename +
@@ -197,6 +213,13 @@ namespace TransplanterLib
                 "'";
         }
 
+        /// <summary>
+        /// Runs an external executable
+        /// </summary>
+        /// <param name="filename">EXE to run</param>
+        /// <param name="arguments">EXE arguments</param>
+        /// <param name="workingdir">Working directory for EXE</param>
+        /// <returns></returns>
         public static string RunExternalExe(string filename, string arguments = null, string workingdir = null)
         {
             var process = new Process();
@@ -257,6 +280,11 @@ namespace TransplanterLib
             }
         }
 
+        /// <summary>
+        /// Dumps all exec functions from all pcc's in the specified folder into a file
+        /// </summary>
+        /// <param name="folder">Folder to search for pcc's for.</param>
+        /// <param name="outputfolder">Folder to place a file named ExecFunctions.txt into. If null it will be placed in folder.</param>
         public static void dumpAllExecFromFolder(string folder, string outputfolder = null)
         {
             SortedSet<String> uniqueExecFunctions = new SortedSet<String>(); //unique set of function names
@@ -345,6 +373,11 @@ namespace TransplanterLib
             }
         }
 
+        /// <summary>
+        /// Dumps functions labeled as Exec into a file
+        /// </summary>
+        /// <param name="pccfile">File to dump functions from</param>
+        /// <param name="outputfile">File to save dump to</param>
         public static void dumpAllExecFromFile(string pccfile, string outputfile = null)
         {
             Console.WriteLine("Scanning " + Path.GetFileName(pccfile) + " for Exec Functions");
@@ -437,10 +470,10 @@ namespace TransplanterLib
         }
 
         /// <summary>
-        /// Dumps all function data from the 
+        /// Dumps PCC data from all PCCs in the specified folder, recursively.
         /// </summary>
         /// <param name="path">Base path to start dumping functions from. Will search all subdirectories for pcc files.</param>
-        /// <param name="args">Set of arguments for what to dump.</param>
+        /// <param name="args">Set of arguments for what to dump. In order: imports, exports, data, scripts, coalesced, names. At least 1 of these options must be true.</param>
         /// <param name="outputfolder">Output path to place files in. If null, it will use the same folder as the currently processing PCC. Files will be placed relative to the base path.</param>
         public static void dumpPCCFolder(string path, Boolean[] args, string outputfolder = null)
         {
@@ -460,6 +493,12 @@ namespace TransplanterLib
             }
         }
 
+        /// <summary>
+        /// Dumps data from a pcc file to a text file
+        /// </summary>
+        /// <param name="file">PCC file path to dump from</param>
+        /// <param name="args">6 element boolean array, specifying what should be dumped. In order: imports, exports, data, scripts, coalesced, names. At least 1 of these options must be true.</param>
+        /// <param name="outputfolder"></param>
         public static void dumpPCCFile(string file, Boolean[] args, string outputfolder = null)
         {
             try
@@ -606,7 +645,10 @@ namespace TransplanterLib
             }
         }
 
-
+        /// <summary>
+        /// Writes a line to the console if verbose mode is turned on
+        /// </summary>
+        /// <param name="message">Verbose message to write</param>
         public static void writeVerboseLine(String message)
         {
             if (verbose)
