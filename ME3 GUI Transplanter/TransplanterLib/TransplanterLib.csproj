@@ -30,45 +30,21 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="AmaroK86.ImageFormat">
-      <HintPath>..\..\ME3Explorer\AmaroK86.ImageFormat.dll</HintPath>
-    </Reference>
-    <Reference Include="AmaroK86.ImageMipMapHandler">
-      <HintPath>..\..\ME3Explorer\AmaroK86.ImageMipMapHandler.dll</HintPath>
-    </Reference>
-    <Reference Include="AmaroK86.MassEffect3.TOCHandler">
-      <HintPath>..\..\ME3Explorer\AmaroK86.MassEffect3.TOCHandler.dll</HintPath>
-    </Reference>
-    <Reference Include="AmaroK86.MassEffect3.WindowProgress">
-      <HintPath>..\..\ME3Explorer\AmaroK86.MassEffect3.WindowProgress.dll</HintPath>
-    </Reference>
-    <Reference Include="AmaroK86.MassEffect3.ZlibBlock">
+    <Reference Include="AmaroK86.MassEffect3.ZlibBlock, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
       <HintPath>..\libs\AmaroK86.MassEffect3.ZlibBlock.dll</HintPath>
-    </Reference>
-    <Reference Include="Be.Windows.Forms.HexBox">
-      <HintPath>..\..\ME3Explorer\Be.Windows.Forms.HexBox.dll</HintPath>
     </Reference>
     <Reference Include="CommandLine, Version=1.9.71.2, Culture=neutral, PublicKeyToken=de6f01bd326f8c32, processorArchitecture=MSIL">
       <HintPath>..\packages\CommandLineParser.1.9.71\lib\net45\CommandLine.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="DevILNet">
-      <HintPath>..\..\ME3Explorer\DevILNet.dll</HintPath>
-    </Reference>
-    <Reference Include="Gibbed.IO">
+    <Reference Include="Gibbed.IO, Version=1.0.5836.30442, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
       <HintPath>..\libs\Gibbed.IO.dll</HintPath>
     </Reference>
-    <Reference Include="ICSharpCode.SharpZipLib">
+    <Reference Include="ICSharpCode.SharpZipLib, Version=0.86.0.518, Culture=neutral, PublicKeyToken=1b03e6acf1164f73, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
       <HintPath>..\libs\ICSharpCode.SharpZipLib.dll</HintPath>
-    </Reference>
-    <Reference Include="KFreonLib">
-      <HintPath>..\..\ME3Explorer\KFreonLib.dll</HintPath>
-    </Reference>
-    <Reference Include="ME3Explorer">
-      <HintPath>..\..\ME3Explorer\ME3Explorer.exe</HintPath>
-    </Reference>
-    <Reference Include="NDesk.Options">
-      <HintPath>..\libs\NDesk.Options.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
@@ -92,10 +68,10 @@
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="Decompress.exe">
+    <Content Include="..\libs\Decompress.exe">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="NDesk.Options.dll">
+    <Content Include="..\libs\NDesk.Options.dll">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>

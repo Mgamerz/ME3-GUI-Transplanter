@@ -28,6 +28,7 @@
         /// </summary>
         private void InitializeComponent()
         {
+            System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(TransplanterGUI));
             this.transplantButton = new System.Windows.Forms.Button();
             this.groupBox1 = new System.Windows.Forms.GroupBox();
             this.srcfileBrowseButton = new System.Windows.Forms.Button();
@@ -147,6 +148,7 @@
             this.Controls.Add(this.groupBox2);
             this.Controls.Add(this.groupBox1);
             this.Controls.Add(this.transplantButton);
+            this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
             this.Name = "TransplanterGUI";
             this.Text = "ME3 GFX Transplanter by FemShep";
             this.groupBox1.ResumeLayout(false);

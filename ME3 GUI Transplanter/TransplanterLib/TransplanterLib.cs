@@ -19,60 +19,9 @@ namespace TransplanterLib
             }
         }
 
-        static String getPccDump(string filepath, Boolean imports, Boolean exports, Boolean names, Boolean data, Boolean scriptdata)
-        {
-
-            PCCObject pcc = new PCCObject(filepath);
-            System.IO.StringWriter stringoutput = new System.IO.StringWriter();
-
-            if (imports)
-            {
-                stringoutput.WriteLine("--Imports");
-                for (int i = pcc.Imports.Count - 1; i >= 0; i--)
-                    stringoutput.WriteLine(pcc.Imports[i].ObjectName);
-                stringoutput.WriteLine("--Imports Finished");
-            }
-
-            if (exports)
-            {
-                stringoutput.WriteLine("--Exports");
-                foreach (PCCObject.ExportEntry exp in pcc.Exports)
-                {
-                    stringoutput.WriteLine("=======================================================================");
-                    stringoutput.WriteLine(exp.PackageFullName + "." + exp.ObjectName + "(" + exp.ClassName + ")");
-                    if (scriptdata)
-                    {
-                        if (exp.ClassName == "Function")
-                        {
-                            stringoutput.WriteLine("==============Function==============");
-                            Function func = new Function(exp.Data, pcc);
-                            stringoutput.WriteLine(func.ToRawText());
-                        }
-                    }
-                    if (data)
-                    {
-                        stringoutput.WriteLine("==============Data==============");
-                        stringoutput.WriteLine(exp.Data);
-                    }
-                }
-                stringoutput.WriteLine("--Exports Finished");
-
-            }
-
-
-            if (names)
-            {
-                int count = 0;
-                foreach (string s in pcc.Names)
-                    stringoutput.WriteLine((count++) + " : " + s);
-            }
-            return stringoutput.ToString();
-        }
-
-
         static void dumpAllExecFunctions(string path)
         {
-            string[] files = System.IO.Directory.GetFiles(path, "*.pcc");
+            string[] files = Directory.GetFiles(path, "*.pcc*", SearchOption.AllDirectories);
             using (System.IO.StreamWriter file = new System.IO.StreamWriter(path + "execfunctions.txt", false))
             {
                 foreach (String pccfile in files)
@@ -165,28 +114,31 @@ namespace TransplanterLib
         /// Extracts all GFX (GUI) files from the specified source file. It will extract only what is listed in packageName for the export, unless it is null, in which case all GFX files are extracted to the specified path.
         /// </summary>
         /// <param name="sourceFile">Source PCC file to inspect.</param>
-        /// <param name="packageName">Packagename to scan for. If null, all exports are scanned.</param>
         /// <param name="path">Directory to put extracted GFX files. If it does not exist, it will be created.</param>
-        public static void extractAllGFxMovies(string sourceFile, string packageName, string path, BackgroundWorker worker = null)
+        public static void extractAllGFxMovies(string sourceFile, string outputpath = null, BackgroundWorker worker = null)
         {
-            if (!path.EndsWith("\\"))
+            if (outputpath == null)
             {
-                path = path + '\\';
+                outputpath = Directory.GetParent(sourceFile).ToString();
+            }
+
+            if (!outputpath.EndsWith("\\"))
+            {
+                outputpath = outputpath + '\\';
             }
             PCCObject pcc = new PCCObject(sourceFile);
             int numExports = pcc.Exports.Count;
             for (int i = 0; i < numExports; i++)
             {
                 PCCObject.ExportEntry exp = pcc.Exports[i];
-                if ((packageName == null || String.Equals(exp.PackageFullName, packageName)) && exp.ClassName == "GFxMovieInfo")
-                //if package is null just match on them all
+                if (exp.ClassName == "GFxMovieInfo")
                 {
-                    Directory.CreateDirectory(path);
+                    Directory.CreateDirectory(outputpath);
 
                     String fname = exp.ObjectName;
 
-                    Console.WriteLine("Extracting to: " + path + exp.PackageFullName + "." + fname + ".swf");
-                    extract_swf(exp, path + exp.PackageFullName + "." + fname + ".swf");
+                    Console.WriteLine("Extracting: " + outputpath + exp.PackageFullName + "." + fname + ".swf");
+                    extract_swf(exp, outputpath + exp.PackageFullName + "." + fname + ".swf");
                 }
 
                 if (worker != null)
@@ -196,9 +148,24 @@ namespace TransplanterLib
             }
         }
 
-        static KeyValuePair<string, string> newPackageObject(string packagename, string objectname)
+        public static void extractAllGFxMoviesFromFolder(string folder, string outputfolder = null)
         {
-            return new KeyValuePair<string, string>(packagename, objectname);
+            string[] files = Directory.GetFiles(folder, "*.pcc*", SearchOption.AllDirectories);
+            foreach (string file in files)
+            {
+                Console.WriteLine("Scanning " + file);
+                string relative = GetRelativePath(folder, Directory.GetParent(file).ToString());
+                string fname = Path.GetFileNameWithoutExtension(file);
+
+                string outfolder = outputfolder;
+                if (outfolder == null)
+                {
+                    outfolder = folder;
+                }
+
+                outfolder = outfolder + relative + @"\" + fname + @"\";
+                extractAllGFxMovies(file, outfolder);
+            }
         }
 
         /// <summary>
@@ -228,7 +195,7 @@ namespace TransplanterLib
                 for (int i = 0; i < numExports; i++)
                 {
                     PCCObject.ExportEntry exp = pcc.Exports[i];
-                    
+
                     if (exp.ClassName == "GFxMovieInfo")
                     {
                         string packobjname = exp.PackageFullName + "." + exp.ObjectName;
@@ -243,48 +210,15 @@ namespace TransplanterLib
                     if (worker != null && numReplaced % 10 == 0)
                     {
                         //Console.WriteLine("Progress: " + i + " / "+numExports);
-                        worker.ReportProgress((int) (((double)i / numExports) * 100));
+                        worker.ReportProgress((int)(((double)i / numExports) * 100));
                     }
-
                     writeVerboseLine("Replaced " + numReplaced + " files, saving.");
                 }
-                pcc.altSaveToFile(destinationFile, true);
+                pcc.altSaveToFile(destinationFile, 34, worker); //34 is default
             }
             else
             {
                 Console.WriteLine("No source GFX files were found.");
-            }
-        }
-
-        static void replaceSWFs(Dictionary<String, KeyValuePair<string, string>> swfToPackageMap, string sourceFile, string destinationfile, bool altSave = true)
-        {
-            PCCObject pcc = new PCCObject(sourceFile);
-            foreach (KeyValuePair<string, KeyValuePair<string, string>> entry in swfToPackageMap)
-            {
-                Boolean itemFound = false;
-                foreach (PCCObject.ExportEntry exp in pcc.Exports)
-                {
-                    if (String.Equals(exp.PackageFullName, entry.Value.Key) && String.Equals(exp.ObjectName, entry.Value.Value) && exp.ClassName == "GFxMovieInfo")
-                    {
-                        Console.WriteLine("Replacing " + exp.PackageFullName + "." + exp.ObjectName);
-                        replace_swf_file(exp, entry.Key);
-                        itemFound = true;
-                        break;
-                    }
-                }
-                if (!itemFound)
-                {
-                    throw new Exception("Unable to find export to replace. Please check your build tasks for errors. Could not find export: " + entry.Value.Key + " in file " + sourceFile + ".");
-                }
-            }
-            Console.WriteLine("Saving file " + destinationfile);
-            if (altSave)
-            {
-                pcc.altSaveToFile(destinationfile, true);
-            }
-            else
-            {
-                pcc.saveToFile(destinationfile, true);
             }
         }
 
@@ -329,7 +263,7 @@ namespace TransplanterLib
             }
             catch (Exception e)
             {
-                throw new Exception("OS error while executing " + filename + " " + String.Join(" ", arguments) + ": " + e.Message, e);
+                throw new Exception("OS error while executing " + Format(filename, arguments) + ": " + e.Message, e);
             }
 
             if (process.ExitCode == 0)
@@ -355,243 +289,56 @@ namespace TransplanterLib
             }
         }
 
-        static void clearFolder(string FolderName)
-        {
-            DirectoryInfo dir = new DirectoryInfo(FolderName);
-
-            foreach (FileInfo fi in dir.GetFiles())
-            {
-                fi.Delete();
-            }
-
-            foreach (DirectoryInfo di in dir.GetDirectories())
-            {
-                clearFolder(di.FullName);
-                di.Delete();
-            }
-        }
-
-        static void makeDir(string directory)
-        {
-            if (Directory.Exists(directory))
-            {
-                return;
-            }
-            Directory.CreateDirectory(directory); //create
-        }
-
-        static void Copy(string sourceDir, string targetDir)
-        {
-            makeDir(targetDir);
-            foreach (var file in Directory.GetFiles(sourceDir))
-                File.Copy(file, Path.Combine(targetDir, Path.GetFileName(file)));
-
-            foreach (var directory in Directory.GetDirectories(sourceDir))
-                Copy(directory, Path.Combine(targetDir, Path.GetFileName(directory)));
-        }
-
-        static void Build(string[] args)
-        {
-            //List<String> folders = new List<String>();
-            //folders.Add(@"D:\Origin Games\Mass Effect 3\BIOGame\CookedPCConsole");
-            //folders.Add(@"C:\Users\Michael\BIOGame\DLC\DLC_TestPatch\CookedPCConsole");
-            //folders.Add(@"C:\Users\Michael\BIOGame\DLC\DLC_CON_MP1\CookedPCConsole");
-            //folders.Add(@"C:\Users\Michael\BIOGame\DLC\DLC_CON_MP2\CookedPCConsole");
-            //folders.Add(@"C:\Users\Michael\BIOGame\DLC\DLC_CON_MP3\CookedPCConsole");
-            //folders.Add(@"C:\Users\Michael\BIOGame\DLC\DLC_CON_MP4\CookedPCConsole");
-            //folders.Add(@"C:\Users\Michael\BIOGame\DLC\DLC_CON_MP5\CookedPCConsole");
-            //dumpAllExecFromFolders(folders);
-
-            //Environment.Exit(0);
-
-
-            string myExeDir = (new FileInfo(System.Reflection.Assembly.GetEntryAssembly().Location)).Directory.ToString();
-            Console.Out.WriteLine(myExeDir);
-
-            string baseDir = myExeDir + @"\..\";
-
-            string outputLocation = myExeDir + @"\..\output\MP Controller Support";
-
-            //try
-            //{
-            //    Ini.IniFile ini = new IniFile(myExeDir + @"\..\config\ME3Controller.ini");
-            //    outputLocation = ini.IniReadValue("General", "output_location");
-            //}
-            //catch (Exception e)
-            //{
-            //    outputLocation = myExeDir + @"\..\output\MP Controller Support";
-            //}
-
-            if (outputLocation == "")
-            {
-                outputLocation = myExeDir + @"\..\output\MP Controller Support";
-            }
-
-            Console.Out.WriteLine("================================================================");
-            Console.Out.WriteLine("ME3Controller");
-            Console.Out.WriteLine("================================================================\n");
-            Console.Out.WriteLine("Excutable Directory: " + myExeDir);
-            Console.Out.WriteLine("Output Directory: " + outputLocation);
-            Console.Out.WriteLine("----------------------------------------------------------------\n");
-
-            if (Directory.Exists(outputLocation))
-            {
-                Console.Out.Write("Cleaning outputdir...");
-                clearFolder(outputLocation);
-                Console.Out.WriteLine("done.");
-            }
-            Console.Out.Write("Making output directory...");
-            makeDir(outputLocation);
-            Console.Out.WriteLine("done.");
-
-            Console.Out.Write("Copying base files...");
-            Copy(baseDir + @"base_modfiles", outputLocation);
-            Console.Out.WriteLine("done");
-
-            Console.Out.WriteLine("\n----------------------------------------------------------------");
-            Console.Out.WriteLine("BASEGAME");
-            Console.Out.WriteLine("----------------------------------------------------------------\n");
-
-            makeDir(outputLocation + @"\BASEGAME");
-
-            Console.Out.WriteLine("Compiling BIOP_MP_COMMON.pcc...\n");
-
-            Dictionary<String, KeyValuePair<string, string>> baseswfToPackageMap = new Dictionary<string, KeyValuePair<string, string>>();
-            baseswfToPackageMap.Add(baseDir + @"modded_files\BASEGAME\BIOP_MP_COMMON\GUI_SF_MPAppearance.MPAppearance.swf", newPackageObject("GUI_SF_MPAppearance", "MPAppearance"));
-            //lobby status bars, leave commented for now, we might change it back later
-            //baseswfToPackageMap.Add(baseDir + @"modded_files\BASEGAME\BIOP_MP_COMMON\GUI_SF_MPLobbyStatusBars.MPLobbyStatusBars.swf", newPackageObject("GUI_SF_MPLobbyStatusBars", "MPLobbyStatusBars"));
-            baseswfToPackageMap.Add(baseDir + @"modded_files\BASEGAME\BIOP_MP_COMMON\GUI_SF_MPMatchResults.MPMatchResults.swf", newPackageObject("GUI_SF_MPMatchResults", "MPMatchResults"));
-            baseswfToPackageMap.Add(baseDir + @"modded_files\BASEGAME\BIOP_MP_COMMON\GUI_SF_MPPauseMenu.MPPauseMenu.swf", newPackageObject("GUI_SF_MPPauseMenu", "MPPauseMenu"));
-            replaceSWFs(baseswfToPackageMap, baseDir + @"source_files\BASEGAME\BIOP_MP_COMMON.pcc", outputLocation + @"\BASEGAME\BIOP_MP_COMMON.pcc", true);
-
-            Console.Out.WriteLine("\nCompiling Startup.pcc...\n");
-            Dictionary<String, KeyValuePair<string, string>> startupswfToPackageMap = new Dictionary<string, KeyValuePair<string, string>>();
-            startupswfToPackageMap.Add(baseDir + @"modded_files\BASEGAME\Startup\GUI_SF_MessageBox.messageBox.swf", newPackageObject("GUI_SF_MessageBox", "messageBox"));
-            startupswfToPackageMap.Add(baseDir + @"modded_files\BASEGAME\Startup\GUI_SF_MessageBox_Hint.MessageBox_Hint.swf", newPackageObject("GUI_SF_MessageBox_Hint", "MessageBox_Hint"));
-            startupswfToPackageMap.Add(baseDir + @"modded_files\BASEGAME\Startup\GUI_SF_MPPlayerCountdown.MPPlayerCountdown.swf", newPackageObject("GUI_SF_MPPlayerCountdown", "MPPlayerCountdown"));
-            startupswfToPackageMap.Add(baseDir + @"modded_files\BASEGAME\Startup\GUI_SF_ME2_HUD.ME2_HUD.swf", newPackageObject("GUI_SF_ME2_HUD", "ME2_HUD"));
-            startupswfToPackageMap.Add(baseDir + @"modded_files\BASEGAME\Startup\GUI_SF_SquadRecord.SquadRecord.swf", newPackageObject("GUI_SF_SquadRecord", "SquadRecord"));
-            startupswfToPackageMap.Add(baseDir + @"modded_files\BASEGAME\Startup\GUI_SF_Options.Options.swf", newPackageObject("GUI_SF_Options", "Options"));
-            startupswfToPackageMap.Add(baseDir + @"modded_files\BASEGAME\Startup\GUI_SF_PC_ME2_PowerWheel.PC_ME2_PowerWheel.swf", newPackageObject("GUI_SF_PC_ME2_PowerWheel", "PC_ME2_PowerWheel"));
-
-
-
-            replaceSWFs(startupswfToPackageMap, baseDir + @"source_files\BASEGAME\Startup_xboxicons.pcc", outputLocation + @"\BASEGAME\Startup.pcc", true);
-
-            //Console.Out.WriteLine("\nCompiling SFXGame.pcc...\n");
-            //Dictionary<String, KeyValuePair<string, string>> sfxgameswfToPackageMap = new Dictionary<string, KeyValuePair<string, string>>();
-            //sfxgameswfToPackageMap.Add(baseDir + @"modded_files\BASEGAME\SFXGame\GUI_SF_WeaponModMods.WeaponModMods.swf", newPackageObject("GUI_SF_WeaponModMods", "WeaponModMods"));
-            //sfxgameswfToPackageMap.Add(baseDir + @"modded_files\BASEGAME\SFXGame\GUI_SF_WeaponModStats.WeaponModStats.swf", newPackageObject("GUI_SF_WeaponModStats", "WeaponModStats"));
-            //replaceSWFs(sfxgameswfToPackageMap, baseDir + @"source_files\BASEGAME\SFXGame.pcc", outputLocation + @"\BASEGAME\SFXGame.pcc", true);
-
-
-            Console.Out.WriteLine("\n----------------------------------------------------------------");
-            Console.Out.WriteLine("MP5");
-            Console.Out.WriteLine("----------------------------------------------------------------\n");
-            Console.Out.WriteLine("Compiling MPLobby.pcc...\n");
-            Dictionary<String, KeyValuePair<string, string>> mp5swfToPackageMap = new Dictionary<string, KeyValuePair<string, string>>();
-            mp5swfToPackageMap.Add(baseDir + @"modded_files\MP5\MPLobby\GUI_SF_Leaderboard_DLC.Leaderboard.swf", newPackageObject("GUI_SF_Leaderboard_DLC", "Leaderboard"));
-            mp5swfToPackageMap.Add(baseDir + @"modded_files\MP5\MPLobby\GUI_SF_MPMatchConsum_DLC.MPMatchConsumables.swf", newPackageObject("GUI_SF_MPMatchConsum_DLC", "MPMatchConsumables"));
-            mp5swfToPackageMap.Add(baseDir + @"modded_files\MP5\MPLobby\GUI_SF_WeaponSelect_DLC.WeaponSelect.swf", newPackageObject("GUI_SF_WeaponSelect_DLC", "WeaponSelect"));
-            mp5swfToPackageMap.Add(baseDir + @"modded_files\MP5\MPLobby\GUI_SF_MPChallenges_DLC.MPChallenges.swf", newPackageObject("GUI_SF_MPChallenges_DLC", "MPChallenges"));
-            mp5swfToPackageMap.Add(baseDir + @"modded_files\MP5\MPLobby\GUI_SF_MPSelectKit_DLC.MPSelectKit.swf", newPackageObject("GUI_SF_MPSelectKit_DLC", "MPSelectKit"));
-            mp5swfToPackageMap.Add(baseDir + @"modded_files\MP5\MPLobby\GUI_SF_MPNewLobby_DLC.MPNewLobby.swf", newPackageObject("GUI_SF_MPNewLobby_DLC", "MPNewLobby"));
-            mp5swfToPackageMap.Add(baseDir + @"modded_files\MP5\MPLobby\GUI_SF_MPStore_DLC.MPStore.swf", newPackageObject("GUI_SF_MPStore_DLC", "MPStore"));
-            mp5swfToPackageMap.Add(baseDir + @"modded_files\MP5\MPLobby\GUI_SF_MPReinforcements_DLC.MPReinforcementsReveal.swf", newPackageObject("GUI_SF_MPReinforcements_DLC", "MPReinforcementsReveal"));
-            mp5swfToPackageMap.Add(baseDir + @"modded_files\MP5\MPLobby\GUI_SF_MPPromotion_DLC.MPPromotion.swf", newPackageObject("GUI_SF_MPPromotion_DLC", "MPPromotion"));
-            //replaceSWFs(mp5swfToPackageMap, baseDir + @"source_files\MP5\MPLobby.pcc", outputLocation + @"\MP5\MPLobby.pcc");
-            replaceSWFs(mp5swfToPackageMap, baseDir + @"source_files\MP5\MPLobby_pcccodeui.pcc", outputLocation + @"\MP5\MPLobby.pcc");
-
-            //Console.Out.WriteLine("\nGenerating Coalesced Default_DLC_CON_MP5.bin");
-            //Console.Out.WriteLine("Execute: "+ baseDir + @"tools\MassEffect3.Coalesce\MassEffect3.Coalesce.exe "+ baseDir + @"modded_files\MP5\Default_DLC_CON_MP5\Default_DLC_CON_MP5.xml");
-            //RunExternalExe("\""+baseDir + "tools\\MassEffect3.Coalesce\\MassEffect3.Coalesce.exe\"", "\""+baseDir + "modded_files\\MP5\\Default_DLC_CON_MP5\\Default_DLC_CON_MP5.xml\"");
-            //File.Move(baseDir + @"modded_files\MP5\Default_DLC_CON_MP5\Default_DLC_CON_MP5.bin", outputLocation + @"\MP5\Default_DLC_CON_MP5.bin");
-
-            Console.Out.WriteLine("\nGenerating DLC_SHARED_INT.tlk");
-
-
-            Console.Out.WriteLine("\n----------------------------------------------------------------");
-            Console.Out.WriteLine("TESTPATCH");
-            Console.Out.WriteLine("----------------------------------------------------------------\n");
-            Console.Out.WriteLine("Compiling PATCH_GUI_MP_HUD.pcc...\n");
-            Dictionary<String, KeyValuePair<string, string>> testPatchMPHUDswfToPackageMap = new Dictionary<string, KeyValuePair<string, string>>();
-            testPatchMPHUDswfToPackageMap.Add(baseDir + @"modded_files\TESTPATCH\Patch_GUI_MP_HUD\GUI_SF_MP_HUD.MP_HUD.swf", newPackageObject("GUI_SF_MP_HUD", "MP_HUD"));
-            replaceSWFs(testPatchMPHUDswfToPackageMap, baseDir + @"source_files\TESTPATCH\Patch_GUI_MP_HUD.pcc", outputLocation + @"\TESTPATCH\Patch_GUI_MP_HUD.pcc");
-
-            Console.Out.WriteLine("Compiling Patch_WeaponModMods.pcc...\n");
-            Dictionary<String, KeyValuePair<string, string>> testPatchWeaponModsswfToPackageMap = new Dictionary<string, KeyValuePair<string, string>>();
-            testPatchWeaponModsswfToPackageMap.Add(baseDir + @"modded_files\TESTPATCH\Patch_WeaponModMods\GUI_SF_WeaponModMods.WeaponModMods.swf", newPackageObject("GUI_SF_WeaponModMods", "WeaponModMods"));
-            replaceSWFs(testPatchWeaponModsswfToPackageMap, baseDir + @"source_files\TESTPATCH\Patch_WeaponModMods.pcc", outputLocation + @"\TESTPATCH\Patch_WeaponModMods.pcc");
-
-            Console.Out.WriteLine("Compiling Patch_WeaponModStats.pcc...\n");
-            Dictionary<String, KeyValuePair<string, string>> testPatchWEaponModStatsswfToPackageMap = new Dictionary<string, KeyValuePair<string, string>>();
-            testPatchWEaponModStatsswfToPackageMap.Add(baseDir + @"modded_files\TESTPATCH\Patch_WeaponModStats\GUI_SF_WeaponModStats.WeaponModStats.swf", newPackageObject("GUI_SF_WeaponModStats", "WeaponModStats"));
-            replaceSWFs(testPatchWEaponModStatsswfToPackageMap, baseDir + @"source_files\TESTPATCH\Patch_WeaponModStats.pcc", outputLocation + @"\TESTPATCH\Patch_WeaponModStats.pcc");
-
-            Console.Out.WriteLine("Generating Coalesced Default_DLC_TestPatch.bin");
-            RunExternalExe("\"" + baseDir + "tools\\MassEffect3.Coalesce\\MassEffect3.Coalesce.exe\"", "\"" + baseDir + "modded_files\\TESTPATCH\\Default_DLC_TestPatch\\Default_DLC_TestPatch.xml\"");
-            File.Move(baseDir + @"modded_files\TESTPATCH\Default_DLC_TestPatch\Default_DLC_TestPatch.bin", outputLocation + @"\TESTPATCH\Default_DLC_TestPatch.bin");
-
-
-
-            Console.Out.WriteLine("\n----------------------------------------------------------------");
-            Console.Out.WriteLine("PATCH01");
-            Console.Out.WriteLine("----------------------------------------------------------------\n");
-
-            Console.Out.WriteLine("Generating Coalesced Default_DLC_UPD_Patch01.bin");
-            RunExternalExe("\"" + baseDir + "tools\\MassEffect3.Coalesce\\MassEffect3.Coalesce.exe\"", "\"" + baseDir + "modded_files\\PATCH1\\Default_DLC_UPD_Patch01\\Default_DLC_UPD_Patch01.xml\"");
-            File.Move(baseDir + @"modded_files\PATCH1\Default_DLC_UPD_Patch01\Default_DLC_UPD_Patch01.bin", outputLocation + @"\PATCH1\Default_DLC_UPD_Patch01.bin");
-
-
-            Console.Out.WriteLine("\nBuild Finished.\n");
-        }
-
-        private static void dumpAllExecFromFolders(List<string> folders)
+        public static void dumpAllExecFromFolder(string folder, string outputfolder = null)
         {
             SortedSet<String> uniqueExecFunctions = new SortedSet<String>();
             SortedDictionary<String, List<String>> functionFileMap = new SortedDictionary<String, List<String>>();
-            foreach (String folder in folders)
+            string[] files = System.IO.Directory.GetFiles(folder, "*.pcc");
+            foreach (String pccfile in files)
             {
-                string[] files = System.IO.Directory.GetFiles(folder, "*.pcc");
-                foreach (String pccfile in files)
+                Console.WriteLine("Scanning for exec: " + pccfile);
+                PCCObject pcc = new PCCObject(pccfile);
+                foreach (PCCObject.ExportEntry exp in pcc.Exports)
                 {
-                    System.Console.WriteLine("Searching for EXEC functions: " + pccfile);
-                    bool hasOneExec = false;
-                    PCCObject pcc = new PCCObject(pccfile);
-                    foreach (PCCObject.ExportEntry exp in pcc.Exports)
+                    if (exp.ClassName == "Function")
                     {
-                        if (exp.ClassName == "Function")
+                        Function func = new Function(exp.Data, pcc);
+                        //exec = 9
+                        int execbit = 9;
+                        int flagint = func.GetFlagInt();
+                        int flag = 1 << execbit;
+                        if ((flagint & flag) != 0)
                         {
-                            Function func = new Function(exp.Data, pcc);
-                            //exec = 9
-                            int execbit = 9;
-                            int flagint = func.GetFlagInt();
-                            int flag = 1 << execbit;
-                            if ((flagint & flag) != 0)
+                            //EXEC FUNCTION!
+                            List<String> list;
+                            if (functionFileMap.TryGetValue(exp.PackageName + "." + exp.ObjectName, out list))
                             {
-                                //EXEC FUNCTION!
-                                List<String> list;
-                                if (functionFileMap.TryGetValue(exp.PackageName + "." + exp.ObjectName, out list))
-                                {
-                                    list.Add(Path.GetFileName(pccfile));
-                                }
-                                else
-                                {
-                                    list = new List<String>();
-                                    list.Add(Path.GetFileName(pccfile));
-                                    functionFileMap.Add(exp.PackageName + "." + exp.ObjectName, list);
-                                    //add new
-                                }
-                                System.Console.WriteLine("FOUND EXEC: " + exp.ObjectName);
+                                list.Add(Path.GetFileName(pccfile));
                             }
+                            else
+                            {
+                                list = new List<String>();
+                                list.Add(Path.GetFileName(pccfile));
+                                functionFileMap.Add(exp.PackageName + "." + exp.ObjectName, list);
+                                //add new
+                            }
+                            Console.WriteLine("Exec Function: " + exp.ObjectName);
                         }
                     }
                 }
                 System.Console.WriteLine("Read all PCC files from folder");
             }
-            System.Console.WriteLine("Writing to file");
+            if (outputfolder == null)
+            {
+                outputfolder = folder;
+            }
 
-            using (System.IO.StreamWriter file = new System.IO.StreamWriter(@"C:\Users\Michael\Desktop\execfunctions.txt", false))
+            if (!outputfolder.EndsWith(@"\")) outputfolder += @"\";
+            string outputfile = outputfolder + "ExecFunctions.txt";
+
+            Console.WriteLine("Saving to " + outputfile);
+            Directory.CreateDirectory(Path.GetDirectoryName(outputfile));
+            using (System.IO.StreamWriter file = new System.IO.StreamWriter(outputfile, false))
             {
                 foreach (String key in functionFileMap.Keys)
                 {
@@ -606,8 +353,70 @@ namespace TransplanterLib
                     file.WriteLine();
                 }
             }
-            System.Console.WriteLine("Done.");
         }
+
+        public static void dumpAllExecFromFile(string pccfile, string outputfile = null)
+        {
+            SortedSet<String> uniqueExecFunctions = new SortedSet<String>();
+            SortedDictionary<String, List<String>> functionFileMap = new SortedDictionary<String, List<String>>();
+
+            Console.WriteLine("Scanning for exec: " + pccfile);
+            PCCObject pcc = new PCCObject(pccfile);
+            foreach (PCCObject.ExportEntry exp in pcc.Exports)
+            {
+                if (exp.ClassName == "Function")
+                {
+                    Function func = new Function(exp.Data, pcc);
+                    //exec = 9
+                    int execbit = 9;
+                    int flagint = func.GetFlagInt();
+                    int flag = 1 << execbit;
+                    if ((flagint & flag) != 0)
+                    {
+                        //EXEC FUNCTION!
+                        List<String> list;
+                        if (functionFileMap.TryGetValue(exp.PackageName + "." + exp.ObjectName, out list))
+                        {
+                            list.Add(Path.GetFileName(pccfile));
+                        }
+                        else
+                        {
+                            list = new List<String>();
+                            list.Add(Path.GetFileName(pccfile));
+                            functionFileMap.Add(exp.PackageName + "." + exp.ObjectName, list);
+                            //add new
+                        }
+                        Console.WriteLine("Exec Function: " + exp.ObjectName);
+                    }
+                }
+            }
+            if (outputfile == null)
+            {
+                outputfile = Directory.GetParent(pccfile).ToString();
+            }
+            if (!outputfile.EndsWith(@"\")) outputfile += @"\";
+            outputfile = outputfile + "ExecFunctions.txt";
+
+            Console.WriteLine("Saving to " + outputfile);
+            Directory.CreateDirectory(Path.GetDirectoryName(outputfile));
+            using (System.IO.StreamWriter file = new System.IO.StreamWriter(outputfile, false))
+            {
+                foreach (String key in functionFileMap.Keys)
+                {
+                    List<String> fileList = functionFileMap[key];
+                    file.WriteLine(key);
+                    file.Write("Appears in:");
+                    foreach (String filename in fileList)
+                    {
+                        file.Write(filename + " ");
+                    }
+                    file.WriteLine();
+                    file.WriteLine();
+                }
+            }
+        }
+
+
 
         static void Main(string[] args)
         {
@@ -615,10 +424,10 @@ namespace TransplanterLib
             string baseDir = myExeDir + @"\..\";
 
             //getPccDump(@"V:\Mass Effect 3\BIOGame\DLC\DLC_EXP_Pack003\CookedPCConsole\", "SFXPawn_Heavy");
-            dumpAllFunctionsFromFolder(@"V:\Mass Effect 3\BIOGame\DLC\DLC_HEN_PR\CookedPCConsole\");
-            dumpAllFunctionsFromFolder(@"V:\Mass Effect 3\BIOGame\DLC\DLC_CON_GUN02\CookedPCConsole\");
-            dumpAllFunctionsFromFolder(@"V:\Mass Effect 3\BIOGame\DLC\DLC_CON_GUN01\CookedPCConsole\");
-            dumpAllFunctionsFromFolder(@"V:\Mass Effect 3\BIOGame\DLC\DLC_CON_APP01\CookedPCConsole\");
+            //dumpAllFunctionsFromFolder(@"V:\Mass Effect 3\BIOGame\DLC\DLC_HEN_PR\CookedPCConsole\");
+            //dumpAllFunctionsFromFolder(@"V:\Mass Effect 3\BIOGame\DLC\DLC_CON_GUN02\CookedPCConsole\");
+            //dumpAllFunctionsFromFolder(@"V:\Mass Effect 3\BIOGame\DLC\DLC_CON_GUN01\CookedPCConsole\");
+            //dumpAllFunctionsFromFolder(@"V:\Mass Effect 3\BIOGame\DLC\DLC_CON_APP01\CookedPCConsole\");
 
             //dumpAllFunctionsFromFolder(@"C:\Users\Michael\BIOGame\DLC\DLC_CON_MP4\CookedPCConsole\");
             //dumpAllFunctionsFromFolder(@"C:\Users\Michael\BIOGame\DLC\DLC_CON_MP5\CookedPCConsole\");
@@ -653,30 +462,177 @@ namespace TransplanterLib
                 return s;
             }
         }
-        public static void dumpAllFunctionsFromFolder(string path)
+
+        /// <summary>
+        /// Dumps all function data from the 
+        /// </summary>
+        /// <param name="path">Base path to start dumping functions from. Will search all subdirectories for pcc files.</param>
+        /// <param name="args">Set of arguments for what to dump.</param>
+        /// <param name="outputfolder">Output path to place files in. If null, it will use the same folder as the currently processing PCC. Files will be placed relative to the base path.</param>
+        public static void dumpPCCFolder(string path, Boolean[] args, string outputfolder = null)
         {
-            string[] files = System.IO.Directory.GetFiles(path, "*.pcc");
-            int i = 0;
-            foreach (string file in files)
+            string[] files = Directory.GetFiles(path, "*.pcc*", SearchOption.AllDirectories);
+            for(int i = 0; i < files.Length; i++)
             {
-                i++;
-                try
-                {
-                    Console.WriteLine("[" + i + "/" + files.Length + "] Dumping " + Path.GetFileNameWithoutExtension(file));
-                    getPccDump(file, false, true, false, false, true);
-                }
-                catch (Exception e)
-                {
-                    Console.WriteLine("Exception parsing " + file);
-                }
+                string file = files[i];
+                Console.WriteLine("[" + i + "/" + files.Length + "] Dumping " + Path.GetFileNameWithoutExtension(file));
+                dumpPCCFile(file, args, outputfolder);
             }
         }
+
+        public static void dumpPCCFile(string file, Boolean[] args, string outputfolder = null)
+        {
+            try
+            {
+                Boolean imports = args[0];
+                Boolean exports = args[1];
+                Boolean data = args[2];
+                Boolean scripts = args[3];
+                Boolean names = args[4];
+
+                PCCObject pcc = new PCCObject(file);
+
+                string outfolder = outputfolder;
+                if (outfolder == null)
+                {
+                    outfolder = Directory.GetParent(file).ToString();
+                }
+
+                string savepath = outfolder + Path.GetFileNameWithoutExtension(file) + ".txt";
+                Directory.CreateDirectory(Path.GetDirectoryName(savepath));
+
+                using (StreamWriter stringoutput = new StreamWriter(savepath))
+                {
+
+                    if (imports)
+                    {
+                        stringoutput.WriteLine("--Imports");
+                        for (int x = pcc.Imports.Count - 1; x >= 0; x--)
+                            stringoutput.WriteLine(pcc.Imports[x].ObjectName);
+                        stringoutput.WriteLine("--End of Imports");
+                    }
+
+                    if (exports && !scripts)
+                    {
+                        stringoutput.WriteLine("--Exports");
+                    }
+                    else if (!exports && scripts)
+                    {
+                        stringoutput.WriteLine("--Scripts");
+                    }
+                    else if (exports && scripts)
+                    {
+                        stringoutput.WriteLine("--Exports and Scripts");
+                    }
+                    foreach (PCCObject.ExportEntry exp in pcc.Exports)
+                    {
+                        if (exports || data || (scripts && (exp.ClassName == "Function")))
+                        {
+                            stringoutput.WriteLine("=======================================================================");
+                            stringoutput.WriteLine(exp.PackageFullName + "." + exp.ObjectName + "(" + exp.ClassName + ")");
+                            if (scripts && (exp.ClassName == "Function"))
+                            {
+                                stringoutput.WriteLine("==============Function==============");
+                                Function func = new Function(exp.Data, pcc);
+                                stringoutput.WriteLine(func.ToRawText());
+                            }
+                            if (data)
+                            {
+                                stringoutput.WriteLine("==============Data==============");
+                                stringoutput.WriteLine(BitConverter.ToString(exp.Data));
+                            }
+                        }
+
+                        if (exports && !scripts)
+                        {
+                            stringoutput.WriteLine("--End of Exports");
+                        }
+                        else if (!exports && scripts)
+                        {
+                            stringoutput.WriteLine("--End of Scripts");
+                        }
+                        else if (exports && scripts)
+                        {
+                            stringoutput.WriteLine("--End of Exports and Scripts");
+                        }
+
+                        if (names)
+                        {
+                            stringoutput.WriteLine("--Names");
+
+                            int count = 0;
+                            foreach (string s in pcc.Names)
+                                stringoutput.WriteLine((count++) + " : " + s);
+                            stringoutput.WriteLine("--End of Names");
+                        }
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine("Exception parsing " + file);
+            }
+        }
+
+
         public static void writeVerboseLine(String message)
         {
             if (verbose)
             {
                 Console.WriteLine(message);
             }
+        }
+
+        /// <summary>
+        /// Creates a relative path from one file or folder to another.
+        /// </summary>
+        /// <param name="fromPath">Contains the directory that defines the start of the relative path.</param>
+        /// <param name="toPath">Contains the path that defines the endpoint of the relative path.</param>
+        /// <returns>The relative path from the start directory to the end path.</returns>
+        /// <exception cref="ArgumentNullException"><paramref name="fromPath"/> or <paramref name="toPath"/> is <c>null</c>.</exception>
+        /// <exception cref="UriFormatException"></exception>
+        /// <exception cref="InvalidOperationException"></exception>
+        public static string GetRelativePath(string fromPath, string toPath)
+        {
+            if (string.IsNullOrEmpty(fromPath))
+            {
+                throw new ArgumentNullException("fromPath");
+            }
+
+            if (string.IsNullOrEmpty(toPath))
+            {
+                throw new ArgumentNullException("toPath");
+            }
+
+            Uri fromUri = new Uri(AppendDirectorySeparatorChar(fromPath));
+            Uri toUri = new Uri(AppendDirectorySeparatorChar(toPath));
+
+            if (fromUri.Scheme != toUri.Scheme)
+            {
+                return toPath;
+            }
+
+            Uri relativeUri = fromUri.MakeRelativeUri(toUri);
+            string relativePath = Uri.UnescapeDataString(relativeUri.ToString());
+
+            if (string.Equals(toUri.Scheme, Uri.UriSchemeFile, StringComparison.OrdinalIgnoreCase))
+            {
+                relativePath = relativePath.Replace(Path.AltDirectorySeparatorChar, Path.DirectorySeparatorChar);
+            }
+
+            return relativePath;
+        }
+
+        private static string AppendDirectorySeparatorChar(string path)
+        {
+            // Append a slash only if the path is a directory and does not have a slash.
+            if (!Path.HasExtension(path) &&
+                !path.EndsWith(Path.DirectorySeparatorChar.ToString()))
+            {
+                return path + Path.DirectorySeparatorChar;
+            }
+
+            return path;
         }
     }
 }
