@@ -1,6 +1,6 @@
 ﻿namespace Transplanter_GUI
 {
-    partial class Form1
+    partial class TransplanterGUI
     {
         /// <summary>
         /// Required designer variable.
@@ -28,27 +28,30 @@
         /// </summary>
         private void InitializeComponent()
         {
-            this.button3 = new System.Windows.Forms.Button();
+            this.transplantButton = new System.Windows.Forms.Button();
             this.groupBox1 = new System.Windows.Forms.GroupBox();
-            this.srcTextField = new System.Windows.Forms.TextBox();
             this.srcfileBrowseButton = new System.Windows.Forms.Button();
+            this.srcTextField = new System.Windows.Forms.TextBox();
             this.groupBox2 = new System.Windows.Forms.GroupBox();
             this.button1 = new System.Windows.Forms.Button();
             this.destTextField = new System.Windows.Forms.TextBox();
             this.progressBar1 = new System.Windows.Forms.ProgressBar();
             this.statusLabel = new System.Windows.Forms.Label();
+            this.srcFileChooser = new System.Windows.Forms.OpenFileDialog();
+            this.destFileChooser = new System.Windows.Forms.OpenFileDialog();
             this.groupBox1.SuspendLayout();
             this.groupBox2.SuspendLayout();
             this.SuspendLayout();
             // 
-            // button3
+            // transplantButton
             // 
-            this.button3.Location = new System.Drawing.Point(396, 118);
-            this.button3.Name = "button3";
-            this.button3.Size = new System.Drawing.Size(85, 23);
-            this.button3.TabIndex = 2;
-            this.button3.Text = "Transplant";
-            this.button3.UseVisualStyleBackColor = true;
+            this.transplantButton.Location = new System.Drawing.Point(396, 118);
+            this.transplantButton.Name = "transplantButton";
+            this.transplantButton.Size = new System.Drawing.Size(85, 23);
+            this.transplantButton.TabIndex = 2;
+            this.transplantButton.Text = "Transplant";
+            this.transplantButton.UseVisualStyleBackColor = true;
+            this.transplantButton.Click += new System.EventHandler(this.transplantButton_Click);
             // 
             // groupBox1
             // 
@@ -61,13 +64,6 @@
             this.groupBox1.TabStop = false;
             this.groupBox1.Text = "Source File";
             // 
-            // srcTextField
-            // 
-            this.srcTextField.Location = new System.Drawing.Point(6, 19);
-            this.srcTextField.Name = "srcTextField";
-            this.srcTextField.Size = new System.Drawing.Size(372, 20);
-            this.srcTextField.TabIndex = 3;
-            // 
             // srcfileBrowseButton
             // 
             this.srcfileBrowseButton.Location = new System.Drawing.Point(384, 17);
@@ -76,6 +72,14 @@
             this.srcfileBrowseButton.TabIndex = 1;
             this.srcfileBrowseButton.Text = "Browse...";
             this.srcfileBrowseButton.UseVisualStyleBackColor = true;
+            this.srcfileBrowseButton.Click += new System.EventHandler(this.srcfileBrowseButton_Click);
+            // 
+            // srcTextField
+            // 
+            this.srcTextField.Location = new System.Drawing.Point(6, 19);
+            this.srcTextField.Name = "srcTextField";
+            this.srcTextField.Size = new System.Drawing.Size(372, 20);
+            this.srcTextField.TabIndex = 3;
             // 
             // groupBox2
             // 
@@ -96,6 +100,7 @@
             this.button1.TabIndex = 1;
             this.button1.Text = "Browse...";
             this.button1.UseVisualStyleBackColor = true;
+            this.button1.Click += new System.EventHandler(this.button1_Click);
             // 
             // destTextField
             // 
@@ -106,9 +111,9 @@
             // 
             // progressBar1
             // 
-            this.progressBar1.Location = new System.Drawing.Point(171, 118);
+            this.progressBar1.Location = new System.Drawing.Point(183, 118);
             this.progressBar1.Name = "progressBar1";
-            this.progressBar1.Size = new System.Drawing.Size(219, 23);
+            this.progressBar1.Size = new System.Drawing.Size(207, 23);
             this.progressBar1.TabIndex = 9;
             // 
             // statusLabel
@@ -116,11 +121,23 @@
             this.statusLabel.AutoSize = true;
             this.statusLabel.Location = new System.Drawing.Point(12, 123);
             this.statusLabel.Name = "statusLabel";
-            this.statusLabel.Size = new System.Drawing.Size(117, 13);
+            this.statusLabel.Size = new System.Drawing.Size(165, 13);
             this.statusLabel.TabIndex = 10;
-            this.statusLabel.Text = "10/50 exports scanned";
+            this.statusLabel.Text = "Select source and desination files";
             // 
-            // Form1
+            // srcFileChooser
+            // 
+            this.srcFileChooser.Filter = "Mass Effect 3 PCC Files|*.pcc";
+            this.srcFileChooser.InitialDirectory = "Desktop";
+            this.srcFileChooser.Title = "Select source file to extract from";
+            // 
+            // destFileChooser
+            // 
+            this.destFileChooser.Filter = "Mass Effect 3 PCC Files|*.pcc";
+            this.destFileChooser.InitialDirectory = "Desktop";
+            this.destFileChooser.Title = "Select file to inject into";
+            // 
+            // TransplanterGUI
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
@@ -129,9 +146,9 @@
             this.Controls.Add(this.progressBar1);
             this.Controls.Add(this.groupBox2);
             this.Controls.Add(this.groupBox1);
-            this.Controls.Add(this.button3);
-            this.Name = "Form1";
-            this.Text = "Form1";
+            this.Controls.Add(this.transplantButton);
+            this.Name = "TransplanterGUI";
+            this.Text = "ME3 GFX Transplanter by FemShep";
             this.groupBox1.ResumeLayout(false);
             this.groupBox1.PerformLayout();
             this.groupBox2.ResumeLayout(false);
@@ -143,7 +160,7 @@
 
         #endregion
 
-        private System.Windows.Forms.Button button3;
+        private System.Windows.Forms.Button transplantButton;
         private System.Windows.Forms.GroupBox groupBox1;
         private System.Windows.Forms.Button srcfileBrowseButton;
         private System.Windows.Forms.TextBox srcTextField;
@@ -152,6 +169,8 @@
         private System.Windows.Forms.TextBox destTextField;
         private System.Windows.Forms.ProgressBar progressBar1;
         private System.Windows.Forms.Label statusLabel;
+        private System.Windows.Forms.OpenFileDialog srcFileChooser;
+        private System.Windows.Forms.OpenFileDialog destFileChooser;
     }
 }
 

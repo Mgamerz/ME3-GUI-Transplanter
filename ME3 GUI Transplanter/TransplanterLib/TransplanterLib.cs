@@ -1,58 +1,71 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 using System.Diagnostics;
-using System.Text.RegularExpressions;
-
 using System.IO;
-
-
-using KFreonLib.MEDirectories;
-using KFreonLib.PCCObjects;
-using KFreonLib.Textures;
-using ME3Explorer;
-using ME3Explorer.Unreal;
-using ME3Explorer.Unreal.Classes;
-using Ini;
-using System.Threading;
+using System.Reflection;
+using System.ComponentModel;
 
 namespace TransplanterLib
 {
     public static class TransplanterLib
     {
+        private static Boolean verbose;
+        public static Boolean Verbose
+        {
+            set
+            {
+                verbose = value;
+            }
+        }
+
         static String getPccDump(string filepath, Boolean imports, Boolean exports, Boolean names, Boolean data, Boolean scriptdata)
         {
 
             PCCObject pcc = new PCCObject(filepath);
             System.IO.StringWriter stringoutput = new System.IO.StringWriter();
 
-            stringoutput.WriteLine("--Imports");
-            for (int i = pcc.Imports.Count - 1; i >= 0; i--)
-                stringoutput.WriteLine(pcc.Imports[i].ObjectName);
-            stringoutput.WriteLine("--Imports Finished");
-
-            stringoutput.WriteLine("--Exports");
-            foreach (PCCObject.ExportEntry exp in pcc.Exports)
+            if (imports)
             {
-                stringoutput.WriteLine("=======================================================================");
-                stringoutput.WriteLine(exp.PackageFullName + "." + exp.ObjectName + "(" + exp.ClassName + ")");
-                if (exp.ClassName == "Function")
-                {
-                    stringoutput.WriteLine("==============Function==============");
-                    Function func = new Function(exp.Data, pcc);
-                    stringoutput.WriteLine(func.ToRawText());
-                }
+                stringoutput.WriteLine("--Imports");
+                for (int i = pcc.Imports.Count - 1; i >= 0; i--)
+                    stringoutput.WriteLine(pcc.Imports[i].ObjectName);
+                stringoutput.WriteLine("--Imports Finished");
             }
-            stringoutput.WriteLine("--Exports Finished");
 
-            int count = 0;
-            foreach (string s in pcc.Names)
-                stringoutput.WriteLine((count++) + " : " + s);
+            if (exports)
+            {
+                stringoutput.WriteLine("--Exports");
+                foreach (PCCObject.ExportEntry exp in pcc.Exports)
+                {
+                    stringoutput.WriteLine("=======================================================================");
+                    stringoutput.WriteLine(exp.PackageFullName + "." + exp.ObjectName + "(" + exp.ClassName + ")");
+                    if (scriptdata)
+                    {
+                        if (exp.ClassName == "Function")
+                        {
+                            stringoutput.WriteLine("==============Function==============");
+                            Function func = new Function(exp.Data, pcc);
+                            stringoutput.WriteLine(func.ToRawText());
+                        }
+                    }
+                    if (data)
+                    {
+                        stringoutput.WriteLine("==============Data==============");
+                        stringoutput.WriteLine(exp.Data);
+                    }
+                }
+                stringoutput.WriteLine("--Exports Finished");
 
-            stringoutput.WriteLine("Finished!");
+            }
 
+
+            if (names)
+            {
+                int count = 0;
+                foreach (string s in pcc.Names)
+                    stringoutput.WriteLine((count++) + " : " + s);
+            }
             return stringoutput.ToString();
         }
 
@@ -148,19 +161,37 @@ namespace TransplanterLib
             File.WriteAllBytes(filename, originalFile);
         }
 
-        static void extractAllGFxMovies(string packageName, string sourceFile, string path)
+        /// <summary>
+        /// Extracts all GFX (GUI) files from the specified source file. It will extract only what is listed in packageName for the export, unless it is null, in which case all GFX files are extracted to the specified path.
+        /// </summary>
+        /// <param name="sourceFile">Source PCC file to inspect.</param>
+        /// <param name="packageName">Packagename to scan for. If null, all exports are scanned.</param>
+        /// <param name="path">Directory to put extracted GFX files. If it does not exist, it will be created.</param>
+        public static void extractAllGFxMovies(string sourceFile, string packageName, string path, BackgroundWorker worker = null)
         {
-            PCCObject pcc = new PCCObject(sourceFile);
-            foreach (PCCObject.ExportEntry exp in pcc.Exports)
+            if (!path.EndsWith("\\"))
             {
+                path = path + '\\';
+            }
+            PCCObject pcc = new PCCObject(sourceFile);
+            int numExports = pcc.Exports.Count;
+            for (int i = 0; i < numExports; i++)
+            {
+                PCCObject.ExportEntry exp = pcc.Exports[i];
                 if ((packageName == null || String.Equals(exp.PackageFullName, packageName)) && exp.ClassName == "GFxMovieInfo")
                 //if package is null just match on them all
                 {
                     Directory.CreateDirectory(path);
 
                     String fname = exp.ObjectName;
-                    Console.WriteLine("Extracting to: " + path + @"\" + exp.PackageFullName + "." + fname + ".swf");
-                    extract_swf(exp, path + @"\" + exp.PackageFullName + "." + fname + ".swf");
+
+                    Console.WriteLine("Extracting to: " + path + exp.PackageFullName + "." + fname + ".swf");
+                    extract_swf(exp, path + exp.PackageFullName + "." + fname + ".swf");
+                }
+
+                if (worker != null)
+                {
+                    worker.ReportProgress((int)(((double)i / numExports) * 100));
                 }
             }
         }
@@ -168,6 +199,61 @@ namespace TransplanterLib
         static KeyValuePair<string, string> newPackageObject(string packagename, string objectname)
         {
             return new KeyValuePair<string, string>(packagename, objectname);
+        }
+
+        /// <summary>
+        /// Replaces all SWF files in a specified PCC. As each export is scanned, if it is a GFX export and a correspondingly named packagename.sf file exists, it will be repalced.
+        /// </summary>
+        /// <param name="gfxSourceFolder">Source folder, with gfx files in the root.</param>
+        /// <param name="destinationFile">File to update GFX files in</param>
+        public static void replaceSWFs(string gfxSourceFolder, string destinationFile, BackgroundWorker worker = null)
+        {
+            string[] gfxfiles = System.IO.Directory.GetFiles(gfxSourceFolder, "*.swf");
+            List<String> packobjnames = new List<String>();
+            foreach (string gfxfile in gfxfiles)
+            {
+                string packobjname = Path.GetFileNameWithoutExtension(gfxfile);
+                writeVerboseLine(packobjname);
+                packobjnames.Add(packobjname);
+            }
+
+            if (gfxfiles.Length > 0)
+            {
+                string backupfile = destinationFile + ".bak";
+                File.Move(destinationFile, backupfile);
+                writeVerboseLine("Scanning " + destinationFile);
+                int numReplaced = 0;
+                PCCObject pcc = new PCCObject(backupfile);
+                int numExports = pcc.Exports.Count;
+                for (int i = 0; i < numExports; i++)
+                {
+                    PCCObject.ExportEntry exp = pcc.Exports[i];
+                    
+                    if (exp.ClassName == "GFxMovieInfo")
+                    {
+                        string packobjname = exp.PackageFullName + "." + exp.ObjectName;
+                        int index = packobjnames.IndexOf(packobjname);
+                        if (index > -1)
+                        {
+                            Console.WriteLine("Replacing " + exp.PackageFullName + "." + exp.ObjectName);
+                            replace_swf_file(exp, gfxfiles[index]);
+                            numReplaced++;
+                        }
+                    }
+                    if (worker != null && numReplaced % 10 == 0)
+                    {
+                        //Console.WriteLine("Progress: " + i + " / "+numExports);
+                        worker.ReportProgress((int) (((double)i / numExports) * 100));
+                    }
+
+                    writeVerboseLine("Replaced " + numReplaced + " files, saving.");
+                }
+                pcc.altSaveToFile(destinationFile, true);
+            }
+            else
+            {
+                Console.WriteLine("No source GFX files were found.");
+            }
         }
 
         static void replaceSWFs(Dictionary<String, KeyValuePair<string, string>> swfToPackageMap, string sourceFile, string destinationfile, bool altSave = true)
@@ -243,7 +329,7 @@ namespace TransplanterLib
             }
             catch (Exception e)
             {
-                throw new Exception("OS error while executing " + Program.Format(filename, arguments) + ": " + e.Message, e);
+                throw new Exception("OS error while executing " + filename + " " + String.Join(" ", arguments) + ": " + e.Message, e);
             }
 
             if (process.ExitCode == 0)
@@ -304,49 +390,6 @@ namespace TransplanterLib
                 Copy(directory, Path.Combine(targetDir, Path.GetFileName(directory)));
         }
 
-        static void AutoUpdateTOC(string targetDir)
-        {
-            Console.Out.WriteLine("\nAuto updating TOC in " + targetDir);
-
-            TOCBinFile tc = new TOCBinFile(targetDir + @"\PCConsoleTOC.bin");
-
-            DirectoryInfo dir = new DirectoryInfo(targetDir);
-
-            foreach (FileInfo fi in dir.GetFiles())
-            {
-                Console.Out.Write("Searching TOC for: " + fi.Name + "... ");
-                int i = 0;
-                int size = 0;
-                bool fileFound = false;
-                foreach (TOCBinFile.Entry ent in tc.Entries)
-                {
-                    if (ent.name.EndsWith(fi.Name))
-                    {
-                        Console.Out.Write("Found. ");
-                        fileFound = true;
-                        FileInfo f = new FileInfo(targetDir + @"\" + fi.Name);
-                        size = (int)f.Length;
-                    }
-                    i++;
-                }
-                if (fileFound == false)
-                {
-                    Console.Out.WriteLine("Not found");
-                }
-                else
-                {
-                    Console.Out.WriteLine("Size set to " + size.ToString());
-                    tc.UpdateEntry(i, size);
-                }
-            }
-            MemoryStream data = tc.Save();
-
-            //byte[] byteData = copyByteChunk(y, 0, data.Length);
-            File.WriteAllBytes(targetDir + @"\PCConsoleTOC.bin", data.ToArray());
-
-            Console.Out.WriteLine("\n");
-        }
-
         static void Build(string[] args)
         {
             //List<String> folders = new List<String>();
@@ -369,15 +412,15 @@ namespace TransplanterLib
 
             string outputLocation = myExeDir + @"\..\output\MP Controller Support";
 
-            try
-            {
-                Ini.IniFile ini = new IniFile(myExeDir + @"\..\config\ME3Controller.ini");
-                outputLocation = ini.IniReadValue("General", "output_location");
-            }
-            catch (Exception e)
-            {
-                outputLocation = myExeDir + @"\..\output\MP Controller Support";
-            }
+            //try
+            //{
+            //    Ini.IniFile ini = new IniFile(myExeDir + @"\..\config\ME3Controller.ini");
+            //    outputLocation = ini.IniReadValue("General", "output_location");
+            //}
+            //catch (Exception e)
+            //{
+            //    outputLocation = myExeDir + @"\..\output\MP Controller Support";
+            //}
 
             if (outputLocation == "")
             {
@@ -442,8 +485,6 @@ namespace TransplanterLib
             //replaceSWFs(sfxgameswfToPackageMap, baseDir + @"source_files\BASEGAME\SFXGame.pcc", outputLocation + @"\BASEGAME\SFXGame.pcc", true);
 
 
-            AutoUpdateTOC(outputLocation + @"\BASEGAME");
-
             Console.Out.WriteLine("\n----------------------------------------------------------------");
             Console.Out.WriteLine("MP5");
             Console.Out.WriteLine("----------------------------------------------------------------\n");
@@ -467,11 +508,7 @@ namespace TransplanterLib
             //File.Move(baseDir + @"modded_files\MP5\Default_DLC_CON_MP5\Default_DLC_CON_MP5.bin", outputLocation + @"\MP5\Default_DLC_CON_MP5.bin");
 
             Console.Out.WriteLine("\nGenerating DLC_SHARED_INT.tlk");
-            HuffmanCompression hc = new HuffmanCompression();
-            hc.LoadInputData(baseDir + @"modded_files\MP5\DLC_SHARED_INT.xml", TalkFile.Fileformat.Xml, false);
-            hc.SaveToTlkFile(outputLocation + @"\MP5\DLC_SHARED_INT.tlk");
 
-            AutoUpdateTOC(outputLocation + @"\MP5");
 
             Console.Out.WriteLine("\n----------------------------------------------------------------");
             Console.Out.WriteLine("TESTPATCH");
@@ -496,7 +533,6 @@ namespace TransplanterLib
             File.Move(baseDir + @"modded_files\TESTPATCH\Default_DLC_TestPatch\Default_DLC_TestPatch.bin", outputLocation + @"\TESTPATCH\Default_DLC_TestPatch.bin");
 
 
-            AutoUpdateTOC(outputLocation + @"\TESTPATCH");
 
             Console.Out.WriteLine("\n----------------------------------------------------------------");
             Console.Out.WriteLine("PATCH01");
@@ -506,7 +542,6 @@ namespace TransplanterLib
             RunExternalExe("\"" + baseDir + "tools\\MassEffect3.Coalesce\\MassEffect3.Coalesce.exe\"", "\"" + baseDir + "modded_files\\PATCH1\\Default_DLC_UPD_Patch01\\Default_DLC_UPD_Patch01.xml\"");
             File.Move(baseDir + @"modded_files\PATCH1\Default_DLC_UPD_Patch01\Default_DLC_UPD_Patch01.bin", outputLocation + @"\PATCH1\Default_DLC_UPD_Patch01.bin");
 
-            AutoUpdateTOC(outputLocation + @"\PATCH1");
 
             Console.Out.WriteLine("\nBuild Finished.\n");
         }
@@ -618,7 +653,7 @@ namespace TransplanterLib
                 return s;
             }
         }
-        private static void dumpAllFunctionsFromFolder(string path)
+        public static void dumpAllFunctionsFromFolder(string path)
         {
             string[] files = System.IO.Directory.GetFiles(path, "*.pcc");
             int i = 0;
@@ -628,7 +663,7 @@ namespace TransplanterLib
                 try
                 {
                     Console.WriteLine("[" + i + "/" + files.Length + "] Dumping " + Path.GetFileNameWithoutExtension(file));
-                    getPccDump(path, Path.GetFileNameWithoutExtension(file));
+                    getPccDump(file, false, true, false, false, true);
                 }
                 catch (Exception e)
                 {
@@ -636,6 +671,12 @@ namespace TransplanterLib
                 }
             }
         }
+        public static void writeVerboseLine(String message)
+        {
+            if (verbose)
+            {
+                Console.WriteLine(message);
+            }
+        }
     }
-
 }

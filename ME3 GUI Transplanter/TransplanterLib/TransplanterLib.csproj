@@ -16,7 +16,7 @@
     <DebugSymbols>true</DebugSymbols>
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
-    <OutputPath>bin\Debug\</OutputPath>
+    <OutputPath>..\Build\Debug\</OutputPath>
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
@@ -43,25 +43,32 @@
       <HintPath>..\..\ME3Explorer\AmaroK86.MassEffect3.WindowProgress.dll</HintPath>
     </Reference>
     <Reference Include="AmaroK86.MassEffect3.ZlibBlock">
-      <HintPath>..\..\ME3Explorer\AmaroK86.MassEffect3.ZlibBlock.dll</HintPath>
+      <HintPath>..\libs\AmaroK86.MassEffect3.ZlibBlock.dll</HintPath>
     </Reference>
     <Reference Include="Be.Windows.Forms.HexBox">
       <HintPath>..\..\ME3Explorer\Be.Windows.Forms.HexBox.dll</HintPath>
+    </Reference>
+    <Reference Include="CommandLine, Version=1.9.71.2, Culture=neutral, PublicKeyToken=de6f01bd326f8c32, processorArchitecture=MSIL">
+      <HintPath>..\packages\CommandLineParser.1.9.71\lib\net45\CommandLine.dll</HintPath>
+      <Private>True</Private>
     </Reference>
     <Reference Include="DevILNet">
       <HintPath>..\..\ME3Explorer\DevILNet.dll</HintPath>
     </Reference>
     <Reference Include="Gibbed.IO">
-      <HintPath>..\..\ME3Explorer\Gibbed.IO.dll</HintPath>
+      <HintPath>..\libs\Gibbed.IO.dll</HintPath>
     </Reference>
     <Reference Include="ICSharpCode.SharpZipLib">
-      <HintPath>..\..\ME3Explorer\ICSharpCode.SharpZipLib.dll</HintPath>
+      <HintPath>..\libs\ICSharpCode.SharpZipLib.dll</HintPath>
     </Reference>
     <Reference Include="KFreonLib">
       <HintPath>..\..\ME3Explorer\KFreonLib.dll</HintPath>
     </Reference>
     <Reference Include="ME3Explorer">
       <HintPath>..\..\ME3Explorer\ME3Explorer.exe</HintPath>
+    </Reference>
+    <Reference Include="NDesk.Options">
+      <HintPath>..\libs\NDesk.Options.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
@@ -73,8 +80,24 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="BitConverter.cs" />
+    <Compile Include="Bytecode.cs" />
+    <Compile Include="Function.cs" />
+    <Compile Include="PCCHandler.cs" />
+    <Compile Include="PCCObject.cs" />
     <Compile Include="TransplanterLib.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="packages.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="Decompress.exe">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="NDesk.Options.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
