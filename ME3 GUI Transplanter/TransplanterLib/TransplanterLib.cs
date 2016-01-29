@@ -471,12 +471,19 @@ namespace TransplanterLib
         /// <param name="outputfolder">Output path to place files in. If null, it will use the same folder as the currently processing PCC. Files will be placed relative to the base path.</param>
         public static void dumpPCCFolder(string path, Boolean[] args, string outputfolder = null)
         {
-            string[] files = Directory.GetFiles(path, "*.pcc*", SearchOption.AllDirectories);
-            for(int i = 0; i < files.Length; i++)
+            string[] files = Directory.GetFiles(path, "*.pcc", SearchOption.AllDirectories);
+            for (int i = 0; i < files.Length; i++)
             {
                 string file = files[i];
-                Console.WriteLine("[" + i + "/" + files.Length + "] Dumping " + Path.GetFileNameWithoutExtension(file));
-                dumpPCCFile(file, args, outputfolder);
+                string outfolder = outputfolder;
+                if (outfolder != null)
+                {
+                    string relative = GetRelativePath(path, Directory.GetParent(file).ToString());
+                    outfolder = outfolder + relative;
+                }
+
+                Console.WriteLine("[" + (i + 1) + "/" + files.Length + "] Dumping " + Path.GetFileNameWithoutExtension(file));
+                dumpPCCFile(file, args, outfolder);
             }
         }
 
@@ -488,7 +495,8 @@ namespace TransplanterLib
                 Boolean exports = args[1];
                 Boolean data = args[2];
                 Boolean scripts = args[3];
-                Boolean names = args[4];
+                Boolean coalesced = args[4];
+                Boolean names = args[5];
 
                 PCCObject pcc = new PCCObject(file);
 
@@ -506,9 +514,23 @@ namespace TransplanterLib
 
                     if (imports)
                     {
+                        writeVerboseLine("Getting Imports");
                         stringoutput.WriteLine("--Imports");
-                        for (int x = pcc.Imports.Count - 1; x >= 0; x--)
-                            stringoutput.WriteLine(pcc.Imports[x].ObjectName);
+                        for (int x = 0; x < pcc.Imports.Count; x++)
+                        {
+                            PCCObject.ImportEntry imp = pcc.Imports[x];
+                            if (imp.PackageFullName != "Class" && imp.PackageFullName != "Package")
+                            {
+                                stringoutput.WriteLine(x + ": " + imp.PackageFullName + "." + imp.ObjectName + "(From: " + imp.PackageFile + ") " +
+                                    "(Offset: 0x" + (pcc.ImportOffset + (x * PCCObject.ImportEntry.byteSize)).ToString("X4") + ")");
+                            }
+                            else
+                            {
+                                stringoutput.WriteLine(x+": "+imp.ObjectName + "(From: " + imp.PackageFile + ") "+
+                                    "(Offset: 0x" + (pcc.ImportOffset + (x * PCCObject.ImportEntry. byteSize)).ToString("X4") + ")");
+                            }
+                        }
+
                         stringoutput.WriteLine("--End of Imports");
                     }
 
@@ -524,12 +546,29 @@ namespace TransplanterLib
                     {
                         stringoutput.WriteLine("--Exports and Scripts");
                     }
+                    int numDone = 1;
+                    int numTotal = pcc.Exports.Count;
+                    int lastProgress = 0;
+                    writeVerboseLine("Gathering functions,data, and exports");
+                    Boolean needsFlush = false;
+
                     foreach (PCCObject.ExportEntry exp in pcc.Exports)
                     {
-                        if (exports || data || (scripts && (exp.ClassName == "Function")))
+                        if (exports || coalesced || data || (scripts && (exp.ClassName == "Function")))
                         {
+                            int progress = ((int)(((double)numDone / numTotal) * 100));
+                            while (progress >= (lastProgress + 10))
+                            {
+                                Console.Write("..." + (lastProgress + 10) + "%");
+                                needsFlush = true;
+                                lastProgress += 10;
+                            }
                             stringoutput.WriteLine("=======================================================================");
-                            stringoutput.WriteLine(exp.PackageFullName + "." + exp.ObjectName + "(" + exp.ClassName + ")");
+                            if (coalesced && exp.likelyCoalescedVal)
+                            {
+                                stringoutput.Write("[C] ");
+                            }
+                            stringoutput.WriteLine(exp.PackageFullName + "." + exp.ObjectName + "(" + exp.ClassName + ") (Superclass: " + exp.ClassParentWrapped + ") (Data Offset: 0x" + exp.DataOffset + ")");
                             if (scripts && (exp.ClassName == "Function"))
                             {
                                 stringoutput.WriteLine("==============Function==============");
@@ -541,30 +580,36 @@ namespace TransplanterLib
                                 stringoutput.WriteLine("==============Data==============");
                                 stringoutput.WriteLine(BitConverter.ToString(exp.Data));
                             }
+                            numDone++;
                         }
+                    }
+                    if (exports && !scripts)
+                    {
+                        stringoutput.WriteLine("--End of Exports");
+                    }
+                    else if (!exports && scripts)
+                    {
+                        stringoutput.WriteLine("--End of Scripts");
+                    }
+                    else if (exports && scripts)
+                    {
+                        stringoutput.WriteLine("--End of Exports and Scripts");
+                    }
+                    if (needsFlush)
+                    {
+                        Console.WriteLine();
+                    }
 
-                        if (exports && !scripts)
-                        {
-                            stringoutput.WriteLine("--End of Exports");
-                        }
-                        else if (!exports && scripts)
-                        {
-                            stringoutput.WriteLine("--End of Scripts");
-                        }
-                        else if (exports && scripts)
-                        {
-                            stringoutput.WriteLine("--End of Exports and Scripts");
-                        }
+                    if (names)
+                    {
+                        writeVerboseLine("Gathering names");
+                        stringoutput.WriteLine("--Names");
 
-                        if (names)
-                        {
-                            stringoutput.WriteLine("--Names");
+                        int count = 0;
+                        foreach (string s in pcc.Names)
+                            stringoutput.WriteLine((count++) + " : " + s);
+                        stringoutput.WriteLine("--End of Names");
 
-                            int count = 0;
-                            foreach (string s in pcc.Names)
-                                stringoutput.WriteLine((count++) + " : " + s);
-                            stringoutput.WriteLine("--End of Names");
-                        }
                     }
                 }
             }

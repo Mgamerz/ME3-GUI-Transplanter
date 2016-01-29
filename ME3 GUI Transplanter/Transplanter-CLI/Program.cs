@@ -29,7 +29,7 @@ namespace Transplanter_CLI
             HelpText = "Extracts all GFX files from the input (--inputfile or --inputfolder) into a folder of the same name as the pcc file. With --output folder you can redirect the output.")]
         public bool GuiExtract { get; set; }
 
-        [Option('c', "exec-dump", MutuallyExclusiveSet = "operation",
+        [Option('e', "exec-dump", MutuallyExclusiveSet = "operation",
           HelpText = "Dumps all exec functions from the specified file or folder into a file named ExecFunctions.txt (in the same folder as the file or in the specified folder). To dump into this exe directory use the --dumphere switch.")]
         public bool ExecDump { get; set; }
 
@@ -51,6 +51,9 @@ namespace Transplanter_CLI
 
         [Option('r', "exports", DefaultValue = false, HelpText = "Dumps all exports metadata, such as class size and data offset")]
         public bool Exports { get; set; }
+
+        [Option('c', "coalesced", DefaultValue = false, HelpText = "Expands all PCC data while scanning and will dump entires with the Coalesced bit set to true. This will significantly slow down dumping. Entries will start with [C].")]
+        public bool Coalesced { get; set; }
 
         //Options
         [Option('v', "verbose", DefaultValue = false,
@@ -142,25 +145,24 @@ namespace Transplanter_CLI
                 }
                 else if (options.Extract)
                 {
-                    if (options.Imports || options.Exports || options.Data || options.Scripts || options.Names)
+                    if (options.Imports || options.Exports || options.Data || options.Scripts || options.Coalesced || options.Names)
                     {
-                        bool[] dumpargs = new bool[] { options.Imports, options.Exports, options.Data, options.Scripts, options.Names };
+                        bool[] dumpargs = new bool[] { options.Imports, options.Exports, options.Data, options.Scripts, options.Coalesced, options.Names };
                         
 
                         if (options.InputFile != null)
                         {
                             Console.Out.WriteLine("Dumping pcc data from " + options.InputFile +
                             " [Imports: " + options.Imports + ", Exports: " + options.Exports + ", Data: " + options.Data + ", Scripts: " + options.Scripts +
-                            ", Names: " + options.Names + "]");
+                            ", Coalesced: "+options.Coalesced+", Names: " + options.Names + "]");
                             dumpPCCFile(options.InputFile, dumpargs, options.OutputFolder);
                         }
                         if (options.InputFolder != null)
                         {
-                            Console.Out.WriteLine("Dumping pcc data from " + options.InputFolder +
-                               " [Imports: " + options.Imports + ", Exports: " + options.Exports + ", Data: " + options.Data + ", Scripts: " + options.Scripts +
-                               ", Names: " + options.Names + "]");
-                            writeVerboseLine("Dumping all Exec files from " + options.InputFolder);
-                            dumpPCCFolder(options.InputFile, dumpargs, options.OutputFolder);
+                            Console.Out.WriteLine("Dumping pcc data from " + options.InputFile +
+                            " [Imports: " + options.Imports + ", Exports: " + options.Exports + ", Data: " + options.Data + ", Scripts: " + options.Scripts +
+                            ", Coalesced: " + options.Coalesced + "Names: " + options.Names + "]");
+                            dumpPCCFolder(options.InputFolder, dumpargs, options.OutputFolder);
                         }
                     }
                     else
