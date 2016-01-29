@@ -26,14 +26,14 @@ namespace Transplanter_CLI
         public string TransplantFile { get; set; }
 
         [Option('g', "gui-extract", MutuallyExclusiveSet = "operation",
-            HelpText = "Extracts all GFX files from the input (--inputfile or --inputfolder) into a folder of the same name as the pcc file. With --output folder you can redirect the output.")]
+            HelpText = "Extracts all GFX files from the input (--inputfile or --inputfolder) into a folder of the same name as the pcc file. With --outputfolder you can redirect the output.")]
         public bool GuiExtract { get; set; }
 
         [Option('e', "exec-dump", MutuallyExclusiveSet = "operation",
-          HelpText = "Dumps all exec functions from the specified file or folder into a file named ExecFunctions.txt (in the same folder as the file or in the specified folder). To dump into this exe directory use the --dumphere switch.")]
+          HelpText = "Dumps all exec functions from the specified file or folder into a file named ExecFunctions.txt (in the same folder as the file or in the specified folder). To redirect the placement of the ExecFunctions.txt file, use the --outputfolder.")]
         public bool ExecDump { get; set; }
 
-        [Option('x', "extract", DefaultValue = false, MutuallyExclusiveSet = "operation", HelpText = "Specifies the extract operation. Requires --inputfolder and at least one of the following: --scripts, --data, --names, --imports , --exports. Use of --outputfolder will redirect where parsed files are placed.")]
+        [Option('x', "extract", DefaultValue = false, MutuallyExclusiveSet = "operation", HelpText = "Specifies the extract operation. Requires --inputfolder and at least one of the following: --scripts, --data, --names, --imports , --exports, --coalesced. Use of --outputfolder will redirect where parsed files are placed.")]
         public bool Extract { get; set; }
 
         //Extract Options
@@ -46,10 +46,10 @@ namespace Transplanter_CLI
         [Option('s', "scripts", DefaultValue = false, HelpText = "Dumps function exports, as part of the --extract switch.")]
         public bool Scripts { get; set; }
 
-        [Option('d', "data", DefaultValue = false, HelpText = "Dumps export binary data. This will cause a significant increase in filesize and will cause some text editors to have problems opening them. It is useful only for file comparison purposes.")]
+        [Option('d', "data", DefaultValue = false, HelpText = "Dumps export binary data. This will cause a significant increase in filesize and will cause some text editors to have problems opening them. It is useful only for file comparison purposes. This will automatically enable the --exports switch.")]
         public bool Data { get; set; }
 
-        [Option('r', "exports", DefaultValue = false, HelpText = "Dumps all exports metadata, such as class size and data offset")]
+        [Option('r', "exports", DefaultValue = false, HelpText = "Dumps all exports metadata, such as superclass, export type, superclass, and data offset.")]
         public bool Exports { get; set; }
 
         [Option('c', "coalesced", DefaultValue = false, HelpText = "Expands all PCC data while scanning and will dump entires with the Coalesced bit set to true. This will significantly slow down dumping. Entries will start with [C].")]
@@ -69,9 +69,11 @@ namespace Transplanter_CLI
             return HelpText.AutoBuild(this,
               (HelpText current) => HelpText.DefaultParsingErrorsHandler(this, current));
         }
+
+
     }
 
-    class Program
+    class TransplanterCLI
     {
         private static readonly int CODE_NO_INPUT = 9;
         private static readonly int CODE_NO_OPERATION = 10;
@@ -79,12 +81,20 @@ namespace Transplanter_CLI
         private static readonly int CODE_INPUT_FOLDER_NOT_FOUND = 12;
         private static readonly int CODE_NO_TRANSPLANT_FILE = 13;
         private static readonly int CODE_NO_DATA_TO_DUMP = 14;
+        private static readonly int CODE_SAME_IN_OUT_FILE = 15;
 
 
         static void Main(string[] args)
         {
             var options = new Options();
-            if (CommandLine.Parser.Default.ParseArguments(args, options))
+            CommandLine.Parser parser = new CommandLine.Parser(s =>
+             {
+                 s.MutuallyExclusive = true;
+                 s.CaseSensitive = true;
+                 s.HelpWriter = Console.Error;
+             });
+
+            if (parser.ParseArguments(args, options))
             {
                 // Values are available here
                 if (options.Verbose)
@@ -134,52 +144,68 @@ namespace Transplanter_CLI
                 {
                     if (options.InputFile != null)
                     {
-                        writeVerboseLine("Dumping all Exec files from " + options.InputFile);
+                        writeVerboseLine("Dumping all Exec functions from " + options.InputFile);
                         dumpAllExecFromFile(options.InputFile, options.OutputFolder);
                     }
                     if (options.InputFolder != null)
                     {
-                        writeVerboseLine("Dumping all Exec files from " + options.InputFolder);
-                        dumpAllExecFromFolder(options.InputFile, options.OutputFolder);
+                        writeVerboseLine("Dumping all Exec functions from " + options.InputFolder);
+                        dumpAllExecFromFolder(options.InputFolder, options.OutputFolder);
                     }
                 }
                 else if (options.Extract)
                 {
                     if (options.Imports || options.Exports || options.Data || options.Scripts || options.Coalesced || options.Names)
                     {
+                        if (options.Data)
+                        {
+                            options.Exports = true;
+                        }
                         bool[] dumpargs = new bool[] { options.Imports, options.Exports, options.Data, options.Scripts, options.Coalesced, options.Names };
-                        
+
 
                         if (options.InputFile != null)
                         {
-                            Console.Out.WriteLine("Dumping pcc data from " + options.InputFile +
+                            Console.Out.WriteLine("Dumping pcc data of " + options.InputFile +
                             " [Imports: " + options.Imports + ", Exports: " + options.Exports + ", Data: " + options.Data + ", Scripts: " + options.Scripts +
-                            ", Coalesced: "+options.Coalesced+", Names: " + options.Names + "]");
+                            ", Coalesced: " + options.Coalesced + ", Names: " + options.Names + "]");
                             dumpPCCFile(options.InputFile, dumpargs, options.OutputFolder);
                         }
                         if (options.InputFolder != null)
                         {
-                            Console.Out.WriteLine("Dumping pcc data from " + options.InputFile +
+                            Console.Out.WriteLine("Dumping pcc data from " + options.InputFolder +
                             " [Imports: " + options.Imports + ", Exports: " + options.Exports + ", Data: " + options.Data + ", Scripts: " + options.Scripts +
-                            ", Coalesced: " + options.Coalesced + "Names: " + options.Names + "]");
+                            ", Coalesced: " + options.Coalesced + ", Names: " + options.Names + "]");
                             dumpPCCFolder(options.InputFolder, dumpargs, options.OutputFolder);
                         }
                     }
                     else
                     {
-                        Console.Error.WriteLine("Nothing was selected to dump. Use --scripts, --names, --data, --imports or --exports to dump items from a pcc.");
+                        Console.Error.WriteLine("Nothing was selected to dump. Use --scripts, --names, --data, --imports, --exports or --coalesced to dump items from a pcc.");
                         endProgram(CODE_NO_DATA_TO_DUMP);
                     }
                 }
                 else if (options.TransplantFile != null)
                 {
-                    writeVerboseLine("Input file exists: " + options.InputFile);
+                    if (options.InputFile == null)
+                    {
+                        Console.Error.WriteLine("--transplantfile only works with --inputfile.");
+                        endProgram(CODE_INPUT_FILE_NOT_FOUND);
+                    }
+                    if (options.TransplantFile.ToLower() == options.InputFile.ToLower())
+                    {
+                        Console.Error.WriteLine("Cannot transplant GUI files into self");
+                        endProgram(CODE_SAME_IN_OUT_FILE);
+                    }
+
                     if (File.Exists(options.TransplantFile))
                     {
-                        writeVerboseLine("Starting transplant procedures");
+                        Console.WriteLine("Transplanting GUI files from " + options.InputFile + " to " + options.TransplantFile);
+                        Console.WriteLine("Extracting GUI files");
                         string gfxfolder = AppDomain.CurrentDomain.BaseDirectory + @"extractedgfx\";
                         writeVerboseLine("Extracting GFX Files from source to " + gfxfolder);
                         extractAllGFxMovies(options.InputFile, gfxfolder);
+                        Console.WriteLine("Installing GUI files");
                         replaceSWFs(gfxfolder, options.TransplantFile);
                     }
                     else
@@ -199,8 +225,8 @@ namespace Transplanter_CLI
 
         private static void endProgram(int code)
         {
-            Console.WriteLine("Press Enter to exit");
-            Console.ReadLine();
+            //Console.WriteLine("Press Enter to exit");
+            //Console.ReadLine();
             Environment.Exit(code);
         }
 

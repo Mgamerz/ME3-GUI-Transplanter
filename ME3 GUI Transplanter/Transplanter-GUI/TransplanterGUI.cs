@@ -1,5 +1,6 @@
 ﻿using System;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.IO;
 using System.Windows.Forms;
 using static TransplanterLib.TransplanterLib;
@@ -14,6 +15,12 @@ namespace Transplanter_GUI
         public TransplanterGUI()
         {
             InitializeComponent();
+            setupDebugUI();
+        }
+
+        [ConditionalAttribute("DEBUG")]
+        private void setupDebugUI()
+        {
             srcTextField.Text = @"C:\Users\Michael\Desktop\Transplant\Source\MPLobby.pcc";
             destTextField.Text = @"C:\Users\Michael\Desktop\Transplant\Destination\MPLobby.pcc";
             if (File.Exists(@"C:\Users\Michael\Desktop\Transplant\Destination\MPLobby.pcc.bak") && File.Exists(@"C:\Users\Michael\Desktop\Transplant\Destination\MPLobby.pcc"))
@@ -25,7 +32,6 @@ namespace Transplanter_GUI
             {
                 File.Move(@"C:\Users\Michael\Desktop\Transplant\Destination\MPLobby.pcc.bak", @"C:\Users\Michael\Desktop\Transplant\Destination\MPLobby.pcc");
             }
-
         }
 
         private void srcfileBrowseButton_Click(object sender, EventArgs e)

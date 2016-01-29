@@ -19,43 +19,6 @@ namespace TransplanterLib
             }
         }
 
-        static void dumpAllExecFunctions(string path)
-        {
-            string[] files = Directory.GetFiles(path, "*.pcc*", SearchOption.AllDirectories);
-            using (System.IO.StreamWriter file = new System.IO.StreamWriter(path + "execfunctions.txt", false))
-            {
-                foreach (String pccfile in files)
-                {
-                    System.Console.WriteLine("Searching for EXEC functions: " + pccfile);
-                    bool hasOneExec = false;
-                    PCCObject pcc = new PCCObject(pccfile);
-                    foreach (PCCObject.ExportEntry exp in pcc.Exports)
-                    {
-                        if (exp.ClassName == "Function")
-                        {
-                            Function func = new Function(exp.Data, pcc);
-                            //exec = 9
-                            int execbit = 9;
-                            int flagint = func.GetFlagInt();
-                            int flag = 1 << execbit;
-                            if ((flagint & flag) != 0)
-                            {
-                                //EXEC FUNCTION!
-                                System.Console.WriteLine("FOUND EXEC: " + exp.ObjectName);
-                                if (!hasOneExec)
-                                {
-                                    file.WriteLine("\n\n=======" + Path.GetFileName(pccfile) + "========");
-                                }
-                                hasOneExec = true;
-                                file.WriteLine(exp.PackageName + "." + exp.ObjectName);
-                            }
-                        }
-                    }
-                }
-                System.Console.WriteLine("Read all PCC files");
-            }
-        }
-
         static byte[] copyByteChunk(byte[] input, int offset, int length)
         {
             byte[] output = new byte[length];
@@ -137,7 +100,7 @@ namespace TransplanterLib
 
                     String fname = exp.ObjectName;
 
-                    Console.WriteLine("Extracting: " + outputpath + exp.PackageFullName + "." + fname + ".swf");
+                    writeVerboseLine("Extracting: " + outputpath + exp.PackageFullName + "." + fname + ".swf");
                     extract_swf(exp, outputpath + exp.PackageFullName + "." + fname + ".swf");
                 }
 
@@ -187,6 +150,10 @@ namespace TransplanterLib
             if (gfxfiles.Length > 0)
             {
                 string backupfile = destinationFile + ".bak";
+                if (File.Exists(backupfile))
+                {
+                    File.Delete(backupfile);
+                }
                 File.Move(destinationFile, backupfile);
                 writeVerboseLine("Scanning " + destinationFile);
                 int numReplaced = 0;
@@ -202,7 +169,7 @@ namespace TransplanterLib
                         int index = packobjnames.IndexOf(packobjname);
                         if (index > -1)
                         {
-                            Console.WriteLine("Replacing " + exp.PackageFullName + "." + exp.ObjectName);
+                            writeVerboseLine("Replacing " + exp.PackageFullName + "." + exp.ObjectName);
                             replace_swf_file(exp, gfxfiles[index]);
                             numReplaced++;
                         }
@@ -214,6 +181,7 @@ namespace TransplanterLib
                     }
                     writeVerboseLine("Replaced " + numReplaced + " files, saving.");
                 }
+                Console.WriteLine("Saving PCC (this may take a while...)");
                 pcc.altSaveToFile(destinationFile, 34, worker); //34 is default
             }
             else
@@ -291,12 +259,15 @@ namespace TransplanterLib
 
         public static void dumpAllExecFromFolder(string folder, string outputfolder = null)
         {
-            SortedSet<String> uniqueExecFunctions = new SortedSet<String>();
-            SortedDictionary<String, List<String>> functionFileMap = new SortedDictionary<String, List<String>>();
-            string[] files = System.IO.Directory.GetFiles(folder, "*.pcc");
+            SortedSet<String> uniqueExecFunctions = new SortedSet<String>(); //unique set of function names
+            SortedDictionary<String, List<String>> functionFileMap = new SortedDictionary<String, List<String>>(); //what functions appear in what file(s)
+            SortedDictionary<String, String> functionTextMap = new SortedDictionary<String, String>(); //Function > Function Text
+
+            string[] files = Directory.GetFiles(folder, "*.pcc", SearchOption.AllDirectories);
+            int filesDone = 1;
             foreach (String pccfile in files)
             {
-                Console.WriteLine("Scanning for exec: " + pccfile);
+                Console.WriteLine("[" + (filesDone) + "/" + files.Length + "] Scanning for Exec: " + Path.GetFileName(pccfile));
                 PCCObject pcc = new PCCObject(pccfile);
                 foreach (PCCObject.ExportEntry exp in pcc.Exports)
                 {
@@ -311,22 +282,39 @@ namespace TransplanterLib
                         {
                             //EXEC FUNCTION!
                             List<String> list;
-                            if (functionFileMap.TryGetValue(exp.PackageName + "." + exp.ObjectName, out list))
+                            string key = exp.PackageName + "." + exp.ObjectName;
+                            if (functionFileMap.TryGetValue(key, out list))
                             {
+                                // add to list
                                 list.Add(Path.GetFileName(pccfile));
                             }
                             else
                             {
+                                //make new list, add to it
                                 list = new List<String>();
                                 list.Add(Path.GetFileName(pccfile));
                                 functionFileMap.Add(exp.PackageName + "." + exp.ObjectName, list);
-                                //add new
                             }
-                            Console.WriteLine("Exec Function: " + exp.ObjectName);
+
+                            //Check function text
+                            string functext;
+                            if (functionTextMap.TryGetValue(key, out functext))
+                            {
+                                // add to list
+                                if (functext != func.ToString())
+                                {
+                                    functionTextMap[key] = func.ToRawText();
+                                }
+                            }
+                            else
+                            {
+                                //set first time text
+                                functionTextMap[key] = func.ToRawText();
+                            }
                         }
                     }
                 }
-                System.Console.WriteLine("Read all PCC files from folder");
+                filesDone++;
             }
             if (outputfolder == null)
             {
@@ -350,6 +338,8 @@ namespace TransplanterLib
                         file.Write(filename + " ");
                     }
                     file.WriteLine();
+                    file.WriteLine("============Function============");
+                    file.WriteLine(functionTextMap[key]);
                     file.WriteLine();
                 }
             }
@@ -357,10 +347,11 @@ namespace TransplanterLib
 
         public static void dumpAllExecFromFile(string pccfile, string outputfile = null)
         {
+            Console.WriteLine("Scanning " + Path.GetFileName(pccfile) + " for Exec Functions");
             SortedSet<String> uniqueExecFunctions = new SortedSet<String>();
             SortedDictionary<String, List<String>> functionFileMap = new SortedDictionary<String, List<String>>();
+            SortedDictionary<String, String> functionTextMap = new SortedDictionary<String, String>(); //Function > Function Text
 
-            Console.WriteLine("Scanning for exec: " + pccfile);
             PCCObject pcc = new PCCObject(pccfile);
             foreach (PCCObject.ExportEntry exp in pcc.Exports)
             {
@@ -375,7 +366,8 @@ namespace TransplanterLib
                     {
                         //EXEC FUNCTION!
                         List<String> list;
-                        if (functionFileMap.TryGetValue(exp.PackageName + "." + exp.ObjectName, out list))
+                        string key = exp.PackageName + "." + exp.ObjectName;
+                        if (functionFileMap.TryGetValue(key, out list))
                         {
                             list.Add(Path.GetFileName(pccfile));
                         }
@@ -383,10 +375,24 @@ namespace TransplanterLib
                         {
                             list = new List<String>();
                             list.Add(Path.GetFileName(pccfile));
-                            functionFileMap.Add(exp.PackageName + "." + exp.ObjectName, list);
+                            functionFileMap.Add(key, list);
                             //add new
                         }
-                        Console.WriteLine("Exec Function: " + exp.ObjectName);
+                        //Check function text
+                        string functext;
+                        if (functionTextMap.TryGetValue(key, out functext))
+                        {
+                            // add to list
+                            if (functext != func.ToString())
+                            {
+                                functionTextMap[key] = func.ToRawText();
+                            }
+                        }
+                        else
+                        {
+                            //set first time text
+                            functionTextMap[key] = func.ToRawText();
+                        }
                     }
                 }
             }
@@ -411,44 +417,11 @@ namespace TransplanterLib
                         file.Write(filename + " ");
                     }
                     file.WriteLine();
+                    file.WriteLine("============Function============");
+                    file.WriteLine(functionTextMap[key]);
                     file.WriteLine();
                 }
             }
-        }
-
-
-
-        static void Main(string[] args)
-        {
-            string myExeDir = (new FileInfo(System.Reflection.Assembly.GetEntryAssembly().Location)).Directory.ToString();
-            string baseDir = myExeDir + @"\..\";
-
-            //getPccDump(@"V:\Mass Effect 3\BIOGame\DLC\DLC_EXP_Pack003\CookedPCConsole\", "SFXPawn_Heavy");
-            //dumpAllFunctionsFromFolder(@"V:\Mass Effect 3\BIOGame\DLC\DLC_HEN_PR\CookedPCConsole\");
-            //dumpAllFunctionsFromFolder(@"V:\Mass Effect 3\BIOGame\DLC\DLC_CON_GUN02\CookedPCConsole\");
-            //dumpAllFunctionsFromFolder(@"V:\Mass Effect 3\BIOGame\DLC\DLC_CON_GUN01\CookedPCConsole\");
-            //dumpAllFunctionsFromFolder(@"V:\Mass Effect 3\BIOGame\DLC\DLC_CON_APP01\CookedPCConsole\");
-
-            //dumpAllFunctionsFromFolder(@"C:\Users\Michael\BIOGame\DLC\DLC_CON_MP4\CookedPCConsole\");
-            //dumpAllFunctionsFromFolder(@"C:\Users\Michael\BIOGame\DLC\DLC_CON_MP5\CookedPCConsole\");
-
-            //extractAllGFxMovies(null, @"D:\Origin Games\Mass Effect 3\BIOGame\CookedPCConsole\EntryMenu.pcc", baseDir + @"reference_files\BASEGAME\EntryMenu");
-            //string folder = @"C:\Users\Michael\Desktop\ME3CMM\mods\ControllerSupport\DLC_CON_XBX\CookedPCConsole\";
-            //string[] files = System.IO.Directory.GetFiles(folder, "*.pcc");
-            //foreach (string file in files)
-            //{
-            //    extractAllGFxMovies(null, file, Directory.GetParent(file) + @"\" + Path.GetFileNameWithoutExtension(file));
-            //}
-            //string[] files = System.IO.Directory.GetFiles(@"\\psf\Google Drive\MP Controller Support\ME3Controller\xbox_textures\dds", "*.dds");
-            //foreach (string file in files)
-            //{
-            //    string newfile = Regex.Replace(file, @"0x[0-9A-F]{8}", String.Empty);
-            //    File.Move(file, newfile);
-            //    Console.WriteLine(newfile);
-            //}
-            //Thread.Sleep(10000);
-            //Environment.Exit(0);
-            //Build(args);
         }
 
         static string RemoveFromEnd(this string s, string suffix)
@@ -506,6 +479,11 @@ namespace TransplanterLib
                     outfolder = Directory.GetParent(file).ToString();
                 }
 
+                if (!outfolder.EndsWith(@"\"))
+                {
+                    outfolder += @"\";
+                }
+
                 string savepath = outfolder + Path.GetFileNameWithoutExtension(file) + ".txt";
                 Directory.CreateDirectory(Path.GetDirectoryName(savepath));
 
@@ -533,29 +511,40 @@ namespace TransplanterLib
 
                         stringoutput.WriteLine("--End of Imports");
                     }
-
-                    if (exports && !scripts)
+                    
+                    if (exports || scripts || data || coalesced)
                     {
-                        stringoutput.WriteLine("--Exports");
-                    }
-                    else if (!exports && scripts)
-                    {
-                        stringoutput.WriteLine("--Scripts");
-                    }
-                    else if (exports && scripts)
-                    {
-                        stringoutput.WriteLine("--Exports and Scripts");
-                    }
-                    int numDone = 1;
-                    int numTotal = pcc.Exports.Count;
-                    int lastProgress = 0;
-                    writeVerboseLine("Gathering functions,data, and exports");
-                    Boolean needsFlush = false;
-
-                    foreach (PCCObject.ExportEntry exp in pcc.Exports)
-                    {
-                        if (exports || coalesced || data || (scripts && (exp.ClassName == "Function")))
+                        string datasets = "";
+                        if (exports)
                         {
+                            datasets += "Exports ";
+                        }
+                        if (scripts)
+                        {
+                            datasets += "Scripts ";
+                        }
+                        if (coalesced)
+                        {
+                            datasets += "Coalesced ";
+                        }
+                        if (data)
+                        {
+                            datasets += "Data ";
+                        }
+
+                        stringoutput.WriteLine("--Start of " + datasets);
+
+
+                        int numDone = 1;
+                        int numTotal = pcc.Exports.Count;
+                        int lastProgress = 0;
+                        writeVerboseLine("Enumerating exports");
+                        Boolean needsFlush = false;
+
+                        foreach (PCCObject.ExportEntry exp in pcc.Exports)
+                        {
+                            Boolean isCoalesced = coalesced && exp.likelyCoalescedVal;
+                            Boolean isScript = scripts && (exp.ClassName == "Function");
                             int progress = ((int)(((double)numDone / numTotal) * 100));
                             while (progress >= (lastProgress + 10))
                             {
@@ -563,41 +552,39 @@ namespace TransplanterLib
                                 needsFlush = true;
                                 lastProgress += 10;
                             }
-                            stringoutput.WriteLine("=======================================================================");
-                            if (coalesced && exp.likelyCoalescedVal)
+                            if (exports || data || isScript || isCoalesced)
                             {
-                                stringoutput.Write("[C] ");
-                            }
-                            stringoutput.WriteLine(exp.PackageFullName + "." + exp.ObjectName + "(" + exp.ClassName + ") (Superclass: " + exp.ClassParentWrapped + ") (Data Offset: 0x" + exp.DataOffset + ")");
-                            if (scripts && (exp.ClassName == "Function"))
-                            {
-                                stringoutput.WriteLine("==============Function==============");
-                                Function func = new Function(exp.Data, pcc);
-                                stringoutput.WriteLine(func.ToRawText());
-                            }
-                            if (data)
-                            {
-                                stringoutput.WriteLine("==============Data==============");
-                                stringoutput.WriteLine(BitConverter.ToString(exp.Data));
+
+                                stringoutput.WriteLine("=======================================================================");
+
+                                if (isCoalesced)
+                                {
+                                    stringoutput.Write("[C] ");
+                                }
+                                if (exports || isCoalesced || isScript)
+                                {
+                                    stringoutput.WriteLine(exp.PackageFullName + "." + exp.ObjectName + "(" + exp.ClassName + ") (Superclass: " + exp.ClassParentWrapped + ") (Data Offset: 0x" + exp.DataOffset + ")");
+                                }
+                                if (isScript)
+                                {
+                                    stringoutput.WriteLine("==============Function==============");
+                                    Function func = new Function(exp.Data, pcc);
+                                    stringoutput.WriteLine(func.ToRawText());
+                                }
+                                if (data)
+                                {
+                                    stringoutput.WriteLine("==============Data==============");
+                                    stringoutput.WriteLine(BitConverter.ToString(exp.Data));
+                                }
                             }
                             numDone++;
                         }
-                    }
-                    if (exports && !scripts)
-                    {
-                        stringoutput.WriteLine("--End of Exports");
-                    }
-                    else if (!exports && scripts)
-                    {
-                        stringoutput.WriteLine("--End of Scripts");
-                    }
-                    else if (exports && scripts)
-                    {
-                        stringoutput.WriteLine("--End of Exports and Scripts");
-                    }
-                    if (needsFlush)
-                    {
-                        Console.WriteLine();
+                        stringoutput.WriteLine("--End of " + datasets);
+                        
+                        if (needsFlush)
+                        {
+                            Console.WriteLine();
+                        }
                     }
 
                     if (names)
