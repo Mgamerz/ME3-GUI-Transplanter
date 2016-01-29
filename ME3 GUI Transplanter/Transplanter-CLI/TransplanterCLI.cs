@@ -32,7 +32,7 @@ namespace Transplanter_CLI
             HelpText = "Extracts all GFX files from the input (--inputfile or --inputfolder) into a folder of the same name as the pcc file. With --outputfolder you can redirect the output.")]
         public bool GuiExtract { get; set; }
 
-        [Option('e', "exec-dump", MutuallyExclusiveSet = "operation",
+        [Option('u', "exec-dump", MutuallyExclusiveSet = "operation",
           HelpText = "Dumps all exec functions from the specified file or folder into a file named ExecFunctions.txt (in the same folder as the file or in the specified folder). To redirect the placement of the ExecFunctions.txt file, use the --outputfolder.")]
         public bool ExecDump { get; set; }
 
@@ -52,7 +52,7 @@ namespace Transplanter_CLI
         [Option('d', "data", DefaultValue = false, HelpText = "Dumps export binary data. This will cause a significant increase in filesize and will cause some text editors to have problems opening them. It is useful only for file comparison purposes. This will automatically enable the --exports switch.")]
         public bool Data { get; set; }
 
-        [Option('r', "exports", DefaultValue = false, HelpText = "Dumps all exports metadata, such as superclass, export type, superclass, and data offset.")]
+        [Option('e', "exports", DefaultValue = false, HelpText = "Dumps all exports metadata, such as superclass, export type, superclass, and data offset.")]
         public bool Exports { get; set; }
 
         [Option('c', "coalesced", DefaultValue = false, HelpText = "Expands all PCC data while scanning and will dump entires with the Coalesced bit set to true. This will significantly slow down dumping. Entries will start with [C].")]
