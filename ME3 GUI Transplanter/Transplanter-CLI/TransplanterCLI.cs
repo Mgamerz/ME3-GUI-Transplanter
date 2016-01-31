@@ -3,6 +3,7 @@ using CommandLine;
 using CommandLine.Text;
 using System.IO;
 using static TransplanterLib.TransplanterLib;
+using System.Diagnostics;
 
 /// <summary>
 /// Transplanter CLI is the command line interface for TransplanterLib
@@ -23,10 +24,14 @@ namespace Transplanter_CLI
         [Option('o', "outputfolder", HelpText = "Output folder, used by some other command line switches.")]
         public string OutputFolder { get; set; }
 
+        [Option('t', "targetfile",
+            HelpText = "File to be operated on.")]
+        public string TargetFile { get; set; }
+
         //Operations
-        [Option('t', "transplantfile", MutuallyExclusiveSet = "operation",
-            HelpText = "Transplant file to inject GUI files from the source into. Requires --inputfile.")]
-        public string TransplantFile { get; set; }
+        [Option('p', "transplant", MutuallyExclusiveSet = "operation",
+            HelpText = "Indicates that a transplant operation is going to take place. Requires --targetfile.")]
+        public bool Transplant { get; set; }
 
         [Option('g', "gui-extract", MutuallyExclusiveSet = "operation",
             HelpText = "Extracts all GFX files from the input (--inputfile or --inputfolder) into a folder of the same name as the pcc file. With --outputfolder you can redirect the output.")]
@@ -38,6 +43,9 @@ namespace Transplanter_CLI
 
         [Option('x', "extract", DefaultValue = false, MutuallyExclusiveSet = "operation", HelpText = "Specifies the extract operation. Requires --inputfolder and at least one of the following: --scripts, --data, --names, --imports , --exports, --coalesced. Use of --outputfolder will redirect where parsed files are placed.")]
         public bool Extract { get; set; }
+
+        [Option('y', "injectswf", DefaultValue = false, MutuallyExclusiveSet = "operation", HelpText = "Injects an SWF (--inputfile) or a folder of SWF files (--inputfolder) into a PCC (--targetfile). The SWF files must be named in PackageName.ObjectName.swf format.")]
+        public bool Inject { get; set; }
 
         //Extract Options
         [Option('n', "names", DefaultValue = false, HelpText = "Dumps the name table for the PCC.")]
@@ -57,6 +65,10 @@ namespace Transplanter_CLI
 
         [Option('c', "coalesced", DefaultValue = false, HelpText = "Expands all PCC data while scanning and will dump entires with the Coalesced bit set to true. This will significantly slow down dumping. Entries will start with [C].")]
         public bool Coalesced { get; set; }
+
+        //inject options
+        [Option('z', "target-export", HelpText = "Specifies the target export to search for to inject the SWF file in with the --injectswf switch. Only works with the --inputfile switch, not --inputfolder.")]
+        public string TargetExport { get; set; }
 
         //Options
         [Option('v', "verbose", DefaultValue = false,
@@ -94,7 +106,7 @@ namespace Transplanter_CLI
              {
                  s.MutuallyExclusive = true;
                  s.CaseSensitive = true;
-                 s.HelpWriter = Console.Error;
+                 s.HelpWriter = Console.Out;
              });
 
             if (parser.ParseArguments(args, options))
@@ -109,6 +121,7 @@ namespace Transplanter_CLI
                 if (options.InputFile == null && options.InputFolder == null)
                 {
                     Console.Error.WriteLine("--inputfile or --inputfolder argument is required for all operations.");
+                    Console.Error.WriteLine(options.GetUsage());
                     endProgram(CODE_NO_INPUT);
                 }
 
@@ -130,7 +143,32 @@ namespace Transplanter_CLI
                 }
 
                 //Operation Switch
-                if (options.GuiExtract)
+                if (options.Inject)
+                {
+                    if (options.TargetFile == null)
+                    {
+                        Console.Error.WriteLine("--targetfile is required for this operation.");
+                        endProgram(CODE_INPUT_FILE_NOT_FOUND);
+                    }
+
+                    if (!File.Exists(options.TargetFile))
+                    {
+                        Console.Error.WriteLine("Target file does not exist: " + options.TargetFile);
+                        endProgram(CODE_INPUT_FILE_NOT_FOUND);
+                    }
+
+                    if (options.InputFile != null)
+                    {
+                        Console.WriteLine("Injecting SWF into " + options.TargetFile);
+                        replaceSingleSWF(options.InputFile, options.TargetFile, options.TargetExport);
+                    }
+                    else if (options.InputFolder != null)
+                    {
+                        Console.WriteLine("Injecting SWFs into " + options.TargetFile);
+                        replaceSWFs(options.InputFolder, options.TargetFile);
+                    }
+                }
+                else if (options.GuiExtract)
                 {
                     if (options.InputFile != null)
                     {
@@ -188,38 +226,42 @@ namespace Transplanter_CLI
                         endProgram(CODE_NO_DATA_TO_DUMP);
                     }
                 }
-                else if (options.TransplantFile != null)
+                else if (options.Transplant)
                 {
                     if (options.InputFile == null)
                     {
-                        Console.Error.WriteLine("--transplantfile only works with --inputfile.");
+                        Console.Error.WriteLine("--transplant requires --inputfile.");
                         endProgram(CODE_INPUT_FILE_NOT_FOUND);
                     }
-                    if (options.TransplantFile.ToLower() == options.InputFile.ToLower())
+                    if (options.TargetFile == null)
+                    {
+                        Console.Error.WriteLine("--targetfile is required for this operation.");
+                        endProgram(CODE_INPUT_FILE_NOT_FOUND);
+                    }
+                    if (!File.Exists(options.TargetFile))
+                    {
+                        Console.Error.WriteLine("Target file does not exist: "+options.TargetFile);
+                        endProgram(CODE_INPUT_FILE_NOT_FOUND);
+                    }
+
+                    if (options.TargetFile.ToLower() == options.InputFile.ToLower())
                     {
                         Console.Error.WriteLine("Cannot transplant GUI files into self");
                         endProgram(CODE_SAME_IN_OUT_FILE);
                     }
 
-                    if (File.Exists(options.TransplantFile))
-                    {
-                        Console.WriteLine("Transplanting GUI files from " + options.InputFile + " to " + options.TransplantFile);
-                        Console.WriteLine("Extracting GUI files");
-                        string gfxfolder = AppDomain.CurrentDomain.BaseDirectory + @"extractedgfx\";
-                        writeVerboseLine("Extracting GFX Files from source to " + gfxfolder);
-                        extractAllGFxMovies(options.InputFile, gfxfolder);
-                        Console.WriteLine("Installing GUI files");
-                        replaceSWFs(gfxfolder, options.TransplantFile);
-                    }
-                    else
-                    {
-                        Console.Error.WriteLine("File to inject GFx files into does not exist: " + options.TransplantFile);
-                        endProgram(CODE_NO_TRANSPLANT_FILE);
-                    }
+                    Console.WriteLine("Transplanting GUI files from " + options.InputFile + " to " + options.TargetFile);
+                    Console.WriteLine("Extracting GUI files");
+                    string gfxfolder = AppDomain.CurrentDomain.BaseDirectory + @"extractedgfx\";
+                    writeVerboseLine("Extracting GFX Files from source to " + gfxfolder);
+                    extractAllGFxMovies(options.InputFile, gfxfolder);
+                    Console.WriteLine("Installing GUI files");
+                    replaceSWFs(gfxfolder, options.TargetFile);
                 }
                 else
                 {
                     Console.Error.WriteLine("No operation was specified");
+                    Console.Error.WriteLine(options.GetUsage());
                     endProgram(CODE_NO_OPERATION);
                 }
             }
@@ -228,9 +270,15 @@ namespace Transplanter_CLI
 
         private static void endProgram(int code)
         {
-            //Console.WriteLine("Press Enter to exit");
-            //Console.ReadLine();
+            pauseIfDebug();
             Environment.Exit(code);
+        }
+
+        [ConditionalAttribute("DEBUG")]
+        private static void pauseIfDebug()
+        {
+            Console.WriteLine("Press Enter to exit");
+            Console.ReadLine();
         }
     }
 }

@@ -142,6 +142,58 @@ namespace TransplanterLib
         }
 
         /// <summary>
+        /// Replaces a single SWF file in a specified PCC. As each export is scanned, if it is a GFX export and the name matches the input gfx filename, it will be replaced.
+        /// </summary>
+        /// <param name="gfxFile">GFX file to insert (SWF)</param>
+        /// <param name="destinationFile">File to update GFX files in</param>
+        /// <param name="targetExport">Target export to scan for. If none is specified the filename is used as the packname/object name export to find</param>
+        public static void replaceSingleSWF(string gfxFile, string destinationFile, string targetExport = null)
+        {
+            string inpackobjname = Path.GetFileNameWithoutExtension(gfxFile);
+            if (targetExport != null)
+            {
+                inpackobjname = targetExport;
+            }
+            string backupfile = destinationFile + ".bak";
+            if (File.Exists(backupfile))
+            {
+                File.Delete(backupfile);
+            }
+            File.Move(destinationFile, backupfile);
+            writeVerboseLine("Scanning " + destinationFile);
+            PCCObject pcc = new PCCObject(backupfile);
+            int numExports = pcc.Exports.Count;
+            bool replaced = false;
+            for (int i = 0; i < numExports; i++)
+            {
+                PCCObject.ExportEntry exp = pcc.Exports[i];
+
+                if (exp.ClassName == "GFxMovieInfo")
+                {
+                    string packobjname = exp.PackageFullName + "." + exp.ObjectName;
+                    if (packobjname.ToLower() == inpackobjname.ToLower())
+                    {
+                        Console.WriteLine("Replacing " + exp.PackageFullName + "." + exp.ObjectName);
+                        replace_swf_file(exp, gfxFile);
+                        replaced = true;
+                        break;
+                    }
+                }
+
+            }
+
+            if (replaced) {
+                Console.WriteLine("Saving PCC (this may take a while...)");
+                pcc.altSaveToFile(destinationFile, 34); //34 is default
+            }
+            else
+            {
+                Console.WriteLine("No GFX file in the PCC with the name of "+inpackobjname+" was found.");
+                File.Move(backupfile,destinationFile);
+            }
+        }
+
+        /// <summary>
         /// Replaces all SWF files in a specified PCC. As each export is scanned, if it is a GFX export and a correspondingly named packagename.sf file exists, it will be repalced.
         /// </summary>
         /// <param name="gfxSourceFolder">Source folder, with gfx files in the root.</param>
@@ -543,14 +595,14 @@ namespace TransplanterLib
                             }
                             else
                             {
-                                stringoutput.WriteLine(x+": "+imp.ObjectName + "(From: " + imp.PackageFile + ") "+
-                                    "(Offset: 0x" + (pcc.ImportOffset + (x * PCCObject.ImportEntry. byteSize)).ToString("X4") + ")");
+                                stringoutput.WriteLine(x + ": " + imp.ObjectName + "(From: " + imp.PackageFile + ") " +
+                                    "(Offset: 0x" + (pcc.ImportOffset + (x * PCCObject.ImportEntry.byteSize)).ToString("X4") + ")");
                             }
                         }
 
                         stringoutput.WriteLine("--End of Imports");
                     }
-                    
+
                     if (exports || scripts || data || coalesced)
                     {
                         string datasets = "";
@@ -619,7 +671,7 @@ namespace TransplanterLib
                             numDone++;
                         }
                         stringoutput.WriteLine("--End of " + datasets);
-                        
+
                         if (needsFlush)
                         {
                             Console.WriteLine();
