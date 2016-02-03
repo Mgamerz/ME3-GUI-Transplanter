@@ -61,8 +61,11 @@
     <Compile Include="Function.cs" />
     <Compile Include="PCCHandler.cs" />
     <Compile Include="PCCObject.cs" />
+    <Compile Include="PropertyReader.cs" />
+    <Compile Include="SFXEnum.cs" />
     <Compile Include="TransplanterLib.cs" />
     <Compile Include="..\SharedAssemblyInfo.cs" />
+    <Compile Include="UnrealFlags.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

@@ -173,7 +173,15 @@ namespace TransplanterLib
             {
                 get
                 {
-                    return (Data.Length < 25) ? false : (Data[25] == 64); //0x40
+                    return (Data.Length < 25) ? false : ((Data[25] & 64) > 0); //0x40
+                }
+                set { }
+            }
+            public string getCoalByte
+            {
+                get
+                {
+                    return (Data.Length < 25) ? "[N/A]" : "[CB: 0x"+(Data[25].ToString("X2") +"]"); //0x40
                 }
                 set { }
             }

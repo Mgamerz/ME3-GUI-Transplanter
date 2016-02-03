@@ -182,14 +182,15 @@ namespace TransplanterLib
 
             }
 
-            if (replaced) {
+            if (replaced)
+            {
                 Console.WriteLine("Saving PCC (this may take a while...)");
                 pcc.altSaveToFile(destinationFile, 34); //34 is default
             }
             else
             {
-                Console.WriteLine("No GFX file in the PCC with the name of "+inpackobjname+" was found.");
-                File.Move(backupfile,destinationFile);
+                Console.WriteLine("No GFX file in the PCC with the name of " + inpackobjname + " was found.");
+                File.Move(backupfile, destinationFile);
             }
         }
 
@@ -561,6 +562,8 @@ namespace TransplanterLib
                 Boolean scripts = args[3];
                 Boolean coalesced = args[4];
                 Boolean names = args[5];
+                Boolean separateExports = args[6];
+                Boolean properties = args[7];
 
                 PCCObject pcc = new PCCObject(file);
 
@@ -591,12 +594,12 @@ namespace TransplanterLib
                             if (imp.PackageFullName != "Class" && imp.PackageFullName != "Package")
                             {
                                 stringoutput.WriteLine(x + ": " + imp.PackageFullName + "." + imp.ObjectName + "(From: " + imp.PackageFile + ") " +
-                                    "(Offset: 0x" + (pcc.ImportOffset + (x * PCCObject.ImportEntry.byteSize)).ToString("X4") + ")");
+                                    "(Offset: 0x " + (pcc.ImportOffset + (x * PCCObject.ImportEntry.byteSize)).ToString("X4") + ")");
                             }
                             else
                             {
                                 stringoutput.WriteLine(x + ": " + imp.ObjectName + "(From: " + imp.PackageFile + ") " +
-                                    "(Offset: 0x" + (pcc.ImportOffset + (x * PCCObject.ImportEntry.byteSize)).ToString("X4") + ")");
+                                    "(Offset: 0x " + (pcc.ImportOffset + (x * PCCObject.ImportEntry.byteSize)).ToString("X4") + ")");
                             }
                         }
 
@@ -634,8 +637,10 @@ namespace TransplanterLib
 
                         foreach (PCCObject.ExportEntry exp in pcc.Exports)
                         {
-                            Boolean isCoalesced = coalesced && exp.likelyCoalescedVal;
+                            //Boolean isCoalesced = coalesced && exp.likelyCoalescedVal;
+                            Boolean isCoalesced = true;
                             Boolean isScript = scripts && (exp.ClassName == "Function");
+                            Boolean isEnum = exp.ClassName == "Enum";
                             int progress = ((int)(((double)numDone / numTotal) * 100));
                             while (progress >= (lastProgress + 10))
                             {
@@ -645,22 +650,48 @@ namespace TransplanterLib
                             }
                             if (exports || data || isScript || isCoalesced)
                             {
-
-                                stringoutput.WriteLine("=======================================================================");
-
+                                if (separateExports)
+                                {
+                                    stringoutput.WriteLine("=======================================================================");
+                                }
                                 if (isCoalesced)
                                 {
-                                    stringoutput.Write("[C] ");
+                                    //stringoutput.Write("[C] ");
+                                    stringoutput.Write(exp.getCoalByte);
                                 }
+
                                 if (exports || isCoalesced || isScript)
                                 {
-                                    stringoutput.WriteLine(exp.PackageFullName + "." + exp.ObjectName + "(" + exp.ClassName + ") (Superclass: " + exp.ClassParentWrapped + ") (Data Offset: 0x" + exp.DataOffset + ")");
+                                    stringoutput.WriteLine(exp.PackageFullName + "." + exp.ObjectName + "(" + exp.ClassName + ") (Superclass: " + exp.ClassParentWrapped + ") (Data Offset: 0x " + exp.DataOffset.ToString("X4") + ")");
                                 }
+
+                                if (isEnum)
+                                {
+                                    SFXEnum sfxenum = new SFXEnum(pcc, exp.Data);
+                                    stringoutput.WriteLine(sfxenum.ToString());
+                                }
+
                                 if (isScript)
                                 {
                                     stringoutput.WriteLine("==============Function==============");
                                     Function func = new Function(exp.Data, pcc);
                                     stringoutput.WriteLine(func.ToRawText());
+                                }
+                                if (properties)
+                                {
+                                    List<PropertyReader.Property> p;
+
+                                    byte[] buff = exp.Data;
+                                    p = PropertyReader.getPropList(pcc, buff);
+                                    if (p.Count > 0)
+                                    {
+                                        stringoutput.WriteLine("=================================================Properties=================================================");
+                                        stringoutput.WriteLine(String.Format("|{0,40}|{1,15}|{2,10}|{3,30}|", "Name", "Type", "Size", "Value"));
+                                        for (int l = 0; l < p.Count; l++)
+                                            stringoutput.WriteLine(PropertyReader.PropertyToText(p[l], pcc));
+                                        stringoutput.WriteLine("==================================================================================================");
+
+                                    }
                                 }
                                 if (data)
                                 {
@@ -693,7 +724,7 @@ namespace TransplanterLib
             }
             catch (Exception e)
             {
-                Console.WriteLine("Exception parsing " + file);
+                Console.WriteLine("Exception parsing " + file + "\n" + e.Message);
             }
         }
 

@@ -66,6 +66,12 @@ namespace Transplanter_CLI
         [Option('c', "coalesced", DefaultValue = false, HelpText = "Expands all PCC data while scanning and will dump entires with the Coalesced bit set to true. This will significantly slow down dumping. Entries will start with [C].")]
         public bool Coalesced { get; set; }
 
+        [Option('l', "no-line-separators", DefaultValue = false, HelpText = "Does not put line separators between exports.")]
+        public bool LineSeparator { get; set; }
+
+        [Option('p', "properties", DefaultValue = false, HelpText = "Includes the properties of each export in the data dump. This can potentially lead to large increases in filesize.")]
+        public bool Properties { get; set; }
+
         //inject options
         [Option('z', "target-export", HelpText = "Specifies the target export to search for to inject the SWF file in with the --injectswf switch. Only works with the --inputfile switch, not --inputfolder.")]
         public string TargetExport { get; set; }
@@ -142,6 +148,14 @@ namespace Transplanter_CLI
                     endProgram(CODE_INPUT_FOLDER_NOT_FOUND);
                 }
 
+                if (options.OutputFolder != null)
+                {
+                    if (!options.OutputFolder.EndsWith("\\"))
+                    {
+                        options.OutputFolder += "\\";
+                    }
+                }
+
                 //Operation Switch
                 if (options.Inject)
                 {
@@ -202,21 +216,21 @@ namespace Transplanter_CLI
                         {
                             options.Exports = true;
                         }
-                        bool[] dumpargs = new bool[] { options.Imports, options.Exports, options.Data, options.Scripts, options.Coalesced, options.Names };
+                        bool[] dumpargs = new bool[] { options.Imports, options.Exports, options.Data, options.Scripts, options.Coalesced, options.Names, !options.LineSeparator, options.Properties};
 
 
                         if (options.InputFile != null)
                         {
                             Console.Out.WriteLine("Dumping pcc data of " + options.InputFile +
                             " [Imports: " + options.Imports + ", Exports: " + options.Exports + ", Data: " + options.Data + ", Scripts: " + options.Scripts +
-                            ", Coalesced: " + options.Coalesced + ", Names: " + options.Names + "]");
+                            ", Coalesced: " + options.Coalesced + ", Names: " + options.Names + ", Properties: " + options.Properties + "]");
                             dumpPCCFile(options.InputFile, dumpargs, options.OutputFolder);
                         }
                         if (options.InputFolder != null)
                         {
                             Console.Out.WriteLine("Dumping pcc data from " + options.InputFolder +
                             " [Imports: " + options.Imports + ", Exports: " + options.Exports + ", Data: " + options.Data + ", Scripts: " + options.Scripts +
-                            ", Coalesced: " + options.Coalesced + ", Names: " + options.Names + "]");
+                            ", Coalesced: " + options.Coalesced + ", Names: " + options.Names + ", Properties: " + options.Properties+"]");
                             dumpPCCFolder(options.InputFolder, dumpargs, options.OutputFolder);
                         }
                     }
