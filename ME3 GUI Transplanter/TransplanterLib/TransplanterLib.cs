@@ -185,7 +185,8 @@ namespace TransplanterLib
             if (replaced)
             {
                 Console.WriteLine("Saving PCC (this may take a while...)");
-                pcc.altSaveToFile(destinationFile, 34); //34 is default
+                //pcc.altSaveToFile(destinationFile, 34); //34 is default
+                pcc.saveToFile(pcc.bCompressed);
             }
             else
             {
@@ -201,6 +202,7 @@ namespace TransplanterLib
         /// <param name="destinationFile">File to update GFX files in</param>
         public static void replaceSWFs(string gfxSourceFolder, string destinationFile, BackgroundWorker worker = null)
         {
+            bool replaced = false;
             string[] gfxfiles = System.IO.Directory.GetFiles(gfxSourceFolder, "*.swf");
             List<String> packobjnames = new List<String>();
             foreach (string gfxfile in gfxfiles)
@@ -235,6 +237,7 @@ namespace TransplanterLib
                             writeVerboseLine("Replacing " + exp.PackageFullName + "." + exp.ObjectName);
                             replace_swf_file(exp, gfxfiles[index]);
                             numReplaced++;
+                            replaced= true;
                         }
                     }
                     if (worker != null && numReplaced % 10 == 0)
@@ -244,8 +247,18 @@ namespace TransplanterLib
                     }
                     writeVerboseLine("Replaced " + numReplaced + " files, saving.");
                 }
-                Console.WriteLine("Saving PCC (this may take a while...)");
-                pcc.altSaveToFile(destinationFile, 34, worker); //34 is default
+                if (replaced)
+                {
+                    Console.WriteLine("Saving PCC (this may take a while...)");
+                    pcc.altSaveToFile(destinationFile, 34, worker); //34 is default
+                    pcc.saveToFile(pcc.bCompressed);
+                }
+                else
+                {
+                    Console.WriteLine("No SWFs replaced");
+                    File.Move(backupfile, destinationFile);
+
+                }
             }
             else
             {
