@@ -39,7 +39,6 @@ namespace TransplanterLib
         static void replace_swf_file(PCCObject.ExportEntry ent, string swf_path)
         {
             byte[] swf_file = File.ReadAllBytes(swf_path);
-
             byte[] header = copyByteChunk(ent.Data, 0, 20);
             byte[] number1 = System.BitConverter.GetBytes(swf_file.Length + 4);
             byte[] filler = copyByteChunk(ent.Data, 24, 4);
@@ -173,7 +172,7 @@ namespace TransplanterLib
                     string packobjname = exp.PackageFullName + "." + exp.ObjectName;
                     if (packobjname.ToLower() == inpackobjname.ToLower())
                     {
-                        Console.WriteLine("Replacing " + exp.PackageFullName + "." + exp.ObjectName);
+                        Console.WriteLine("#"+i+" Replacing " + exp.PackageFullName + "." + exp.ObjectName);
                         replace_swf_file(exp, gfxFile);
                         replaced = true;
                         break;
@@ -181,12 +180,11 @@ namespace TransplanterLib
                 }
 
             }
-
             if (replaced)
             {
                 Console.WriteLine("Saving PCC (this may take a while...)");
                 //pcc.altSaveToFile(destinationFile, 34); //34 is default
-                pcc.saveToFile(pcc.bCompressed);
+                pcc.saveToFile(destinationFile, pcc.bCompressed);
             }
             else
             {
@@ -208,7 +206,7 @@ namespace TransplanterLib
             foreach (string gfxfile in gfxfiles)
             {
                 string packobjname = Path.GetFileNameWithoutExtension(gfxfile);
-                writeVerboseLine(packobjname);
+                writeVerboseLine("SWF in source folder: "+packobjname);
                 packobjnames.Add(packobjname);
             }
 
@@ -234,7 +232,7 @@ namespace TransplanterLib
                         int index = packobjnames.IndexOf(packobjname);
                         if (index > -1)
                         {
-                            writeVerboseLine("Replacing " + exp.PackageFullName + "." + exp.ObjectName);
+                            writeVerboseLine("#" + i + " Replacing " + exp.PackageFullName + "." + exp.ObjectName);
                             replace_swf_file(exp, gfxfiles[index]);
                             numReplaced++;
                             replaced= true;
@@ -245,13 +243,13 @@ namespace TransplanterLib
                         //Console.WriteLine("Progress: " + i + " / "+numExports);
                         worker.ReportProgress((int)(((double)i / numExports) * 100));
                     }
-                    writeVerboseLine("Replaced " + numReplaced + " files, saving.");
                 }
+                writeVerboseLine("Replaced " + numReplaced + " files, saving.");
                 if (replaced)
                 {
-                    Console.WriteLine("Saving PCC (this may take a while...)");
+                    Console.WriteLine("Saving "+(pcc.bCompressed ? "Compressed" : "Decompressed") +" PCC (this may take a while...)");
                     pcc.altSaveToFile(destinationFile, 34, worker); //34 is default
-                    pcc.saveToFile(pcc.bCompressed);
+                    //pcc.saveToFile(destinationFile, pcc.bCompressed);
                 }
                 else
                 {
@@ -606,12 +604,12 @@ namespace TransplanterLib
                             PCCObject.ImportEntry imp = pcc.Imports[x];
                             if (imp.PackageFullName != "Class" && imp.PackageFullName != "Package")
                             {
-                                stringoutput.WriteLine(x + ": " + imp.PackageFullName + "." + imp.ObjectName + "(From: " + imp.PackageFile + ") " +
+                                stringoutput.WriteLine("#"+((x+1)*-1) + ": " + imp.PackageFullName + "." + imp.ObjectName + "(From: " + imp.PackageFile + ") " +
                                     "(Offset: 0x " + (pcc.ImportOffset + (x * PCCObject.ImportEntry.byteSize)).ToString("X4") + ")");
                             }
                             else
                             {
-                                stringoutput.WriteLine(x + ": " + imp.ObjectName + "(From: " + imp.PackageFile + ") " +
+                                stringoutput.WriteLine("#" + ((x + 1) * -1) + ": " + imp.ObjectName + "(From: " + imp.PackageFile + ") " +
                                     "(Offset: 0x " + (pcc.ImportOffset + (x * PCCObject.ImportEntry.byteSize)).ToString("X4") + ")");
                             }
                         }
@@ -647,9 +645,10 @@ namespace TransplanterLib
                         int lastProgress = 0;
                         writeVerboseLine("Enumerating exports");
                         Boolean needsFlush = false;
-
+                        int index = 0;
                         foreach (PCCObject.ExportEntry exp in pcc.Exports)
                         {
+                            index++;
                             //Boolean isCoalesced = coalesced && exp.likelyCoalescedVal;
                             Boolean isCoalesced = true;
                             Boolean isScript = scripts && (exp.ClassName == "Function");
@@ -667,6 +666,7 @@ namespace TransplanterLib
                                 {
                                     stringoutput.WriteLine("=======================================================================");
                                 }
+                                stringoutput.Write("#" + index + " ");
                                 if (isCoalesced)
                                 {
                                     //stringoutput.Write("[C] ");

@@ -186,14 +186,40 @@ namespace TransplanterLib
             {
                 case PropertyType.StructProperty:
                     s += " \"" + pcc.getNameEntry(p.Value.IntValue) + "\" with " + p.Value.Array.Count.ToString() + " bytes";
-                    value = pcc.getNameEntry(p.Value.IntValue) + " ("+p.Value.Array.Count.ToString() + " bytes)";
+                    value = pcc.getNameEntry(p.Value.IntValue) + " (" + p.Value.Array.Count.ToString() + " bytes)";
                     break;
                 case PropertyType.IntProperty:
-                case PropertyType.ObjectProperty:
                 case PropertyType.BoolProperty:
                 case PropertyType.StringRefProperty:
                     s += " | Value: " + p.Value.IntValue.ToString();
                     value = p.Value.IntValue.ToString();
+                    break;
+                case PropertyType.ObjectProperty:
+                    s += " | Value: (" + p.Value.IntValue.ToString() + ") ";
+                    //try {
+                    //    if (p.Value.IntValue > 0)
+                    //    {
+                    //        s += pcc.Exports[p.Value.IntValue-1].PackageFullName;
+                    //    } else if (p.Value.IntValue < 0)
+                    //    {
+                    //        s += pcc.Imports[(p.Value.IntValue * -1)-1].PackageFullName;
+                    //    }
+                    //} catch (Exception e)
+                    //{
+                    //    Console.WriteLine("EXCEPTION: " + p.Value.IntValue);
+                    //}
+
+                    if (p.Value.IntValue > 0)
+                    {
+                        value = pcc.Exports[p.Value.IntValue - 1].PackageName + " (E# " + ((p.Value.IntValue-1).ToString()) + ")";
+                    }
+                    else if (p.Value.IntValue < 0)
+                    {
+                        value = pcc.Imports[(p.Value.IntValue * -1) - 1].PackageFullName +" (I# "+((p.Value.IntValue+1).ToString())+")";
+                    }
+                    else {
+                        value = p.Value.IntValue.ToString();
+                    }
                     break;
                 case PropertyType.FloatProperty:
                     byte[] buff = BitConverter.GetBytes(p.Value.IntValue);
@@ -571,7 +597,8 @@ namespace TransplanterLib
         }
         public static int detectStart(PCCObject pcc, byte[] raw, long flags)
         {
-            if ((flags & (long)UnrealFlags.EObjectFlags.HasStack) != 0)
+            //has stack
+            if ((flags & 0x02000000) != 0)
             {
                 return 30;
             }

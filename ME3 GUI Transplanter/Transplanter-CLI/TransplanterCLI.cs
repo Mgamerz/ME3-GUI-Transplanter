@@ -146,7 +146,7 @@ namespace Transplanter_CLI
                 {
                     Console.Error.WriteLine("Input folder does not exist: " + options.InputFolder);
                     endProgram(CODE_INPUT_FOLDER_NOT_FOUND);
-                }
+               } 
 
                 if (options.OutputFolder != null)
                 {
@@ -154,6 +154,7 @@ namespace Transplanter_CLI
                     {
                         options.OutputFolder += "\\";
                     }
+                    Console.WriteLine("Redirecting output to " + options.OutputFolder);
                 }
 
                 //Operation Switch
