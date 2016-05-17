@@ -47,6 +47,10 @@ namespace Transplanter_CLI
         [Option('y', "injectswf", DefaultValue = false, MutuallyExclusiveSet = "operation", HelpText = "Injects an SWF (--inputfile) or a folder of SWF files (--inputfolder) into a PCC (--targetfile). The SWF files must be named in PackageName.ObjectName.swf format.")]
         public bool Inject { get; set; }
 
+        [Option('r', "verifypccintegrity", DefaultValue = false, MutuallyExclusiveSet = "operation", HelpText = "Loads a PCC to verify it is valid (or at least loadable). Returns 1 if not, 0 if OK.")]
+        public bool VerifyPCC { get; set; }
+
+
         //Extract Options
         [Option('n', "names", DefaultValue = false, HelpText = "Dumps the name table for the PCC.")]
         public bool Names { get; set; }
@@ -146,7 +150,7 @@ namespace Transplanter_CLI
                 {
                     Console.Error.WriteLine("Input folder does not exist: " + options.InputFolder);
                     endProgram(CODE_INPUT_FOLDER_NOT_FOUND);
-               } 
+                }
 
                 if (options.OutputFolder != null)
                 {
@@ -158,7 +162,19 @@ namespace Transplanter_CLI
                 }
 
                 //Operation Switch
-                if (options.Inject)
+                if (options.VerifyPCC)
+                {
+                    if (options.InputFile != null)
+                    {
+                        Console.WriteLine("Checking PCC can load " + options.TargetFile);
+                        int result = VerifyPCC(options.InputFile);
+                    } else
+                    {
+                        Console.Error.WriteLine("Can only verify single pcc integrity, --inputfile is the only allowed input for this operation.");
+                        endProgram(CODE_INPUT_FILE_NOT_FOUND);
+                    }
+                }
+                else if (options.Inject)
                 {
                     if (options.TargetFile == null)
                     {
@@ -217,7 +233,7 @@ namespace Transplanter_CLI
                         {
                             options.Exports = true;
                         }
-                        bool[] dumpargs = new bool[] { options.Imports, options.Exports, options.Data, options.Scripts, options.Coalesced, options.Names, !options.LineSeparator, options.Properties};
+                        bool[] dumpargs = new bool[] { options.Imports, options.Exports, options.Data, options.Scripts, options.Coalesced, options.Names, !options.LineSeparator, options.Properties };
 
 
                         if (options.InputFile != null)
@@ -231,7 +247,7 @@ namespace Transplanter_CLI
                         {
                             Console.Out.WriteLine("Dumping pcc data from " + options.InputFolder +
                             " [Imports: " + options.Imports + ", Exports: " + options.Exports + ", Data: " + options.Data + ", Scripts: " + options.Scripts +
-                            ", Coalesced: " + options.Coalesced + ", Names: " + options.Names + ", Properties: " + options.Properties+"]");
+                            ", Coalesced: " + options.Coalesced + ", Names: " + options.Names + ", Properties: " + options.Properties + "]");
                             dumpPCCFolder(options.InputFolder, dumpargs, options.OutputFolder);
                         }
                     }
@@ -255,7 +271,7 @@ namespace Transplanter_CLI
                     }
                     if (!File.Exists(options.TargetFile))
                     {
-                        Console.Error.WriteLine("Target file does not exist: "+options.TargetFile);
+                        Console.Error.WriteLine("Target file does not exist: " + options.TargetFile);
                         endProgram(CODE_INPUT_FILE_NOT_FOUND);
                     }
 

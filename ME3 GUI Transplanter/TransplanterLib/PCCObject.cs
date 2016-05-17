@@ -486,9 +486,6 @@ namespace TransplanterLib
                 newFileName = Path.GetFullPath(pccFileName) + ".tmp";
             }
 
-            if (bDLCStored)
-                saveCompress = false;
-
             using (MemoryStream newPccStream = new MemoryStream())
             {
 
@@ -693,7 +690,7 @@ namespace TransplanterLib
         /// value in the header. Overwrite existing data with new data.
         /// </summary>
         /// <param name="newFileName">The filename to write to</param>
-        public string altSaveToFile(string newFileName, int HeadeNameOffset = 34, BackgroundWorker worker = null)
+        public string altxSaveToFile(string newFileName, int HeadeNameOffset = 34, BackgroundWorker worker = null)
         {
             string rtValues = "";
             string loc = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);

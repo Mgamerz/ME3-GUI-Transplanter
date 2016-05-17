@@ -68,6 +68,7 @@ namespace TransplanterLib
                 m.WriteByte(bytefooter[i]);
 
             ent.Data = m.ToArray();
+            ent.DataSize = ent.Data.Length;
         }
 
         static void extract_swf(PCCObject.ExportEntry ent, string filename)
@@ -172,7 +173,7 @@ namespace TransplanterLib
                     string packobjname = exp.PackageFullName + "." + exp.ObjectName;
                     if (packobjname.ToLower() == inpackobjname.ToLower())
                     {
-                        Console.WriteLine("#"+i+" Replacing " + exp.PackageFullName + "." + exp.ObjectName);
+                        Console.WriteLine("#" + i + " Replacing " + exp.PackageFullName + "." + exp.ObjectName);
                         replace_swf_file(exp, gfxFile);
                         replaced = true;
                         break;
@@ -184,7 +185,7 @@ namespace TransplanterLib
             {
                 Console.WriteLine("Saving PCC (this may take a while...)");
                 //pcc.altSaveToFile(destinationFile, 34); //34 is default
-                pcc.saveToFile(destinationFile, pcc.bCompressed);
+                pcc.saveToFile(destinationFile, false);
             }
             else
             {
@@ -206,7 +207,7 @@ namespace TransplanterLib
             foreach (string gfxfile in gfxfiles)
             {
                 string packobjname = Path.GetFileNameWithoutExtension(gfxfile);
-                writeVerboseLine("SWF in source folder: "+packobjname);
+                writeVerboseLine("SWF in source folder: " + packobjname);
                 packobjnames.Add(packobjname);
             }
 
@@ -235,7 +236,7 @@ namespace TransplanterLib
                             writeVerboseLine("#" + i + " Replacing " + exp.PackageFullName + "." + exp.ObjectName);
                             replace_swf_file(exp, gfxfiles[index]);
                             numReplaced++;
-                            replaced= true;
+                            replaced = true;
                         }
                     }
                     if (worker != null && numReplaced % 10 == 0)
@@ -247,9 +248,9 @@ namespace TransplanterLib
                 writeVerboseLine("Replaced " + numReplaced + " files, saving.");
                 if (replaced)
                 {
-                    Console.WriteLine("Saving "+(pcc.bCompressed ? "Compressed" : "Decompressed") +" PCC (this may take a while...)");
-                    pcc.altSaveToFile(destinationFile, 34, worker); //34 is default
-                    //pcc.saveToFile(destinationFile, pcc.bCompressed);
+                    Console.WriteLine("Saving Decompressed PCC (this may take a while...)");
+                    //pcc.altSaveToFile(destinationFile, 34, worker); //34 is default
+                    pcc.saveToFile(destinationFile, false, worker);
                 }
                 else
                 {
@@ -275,6 +276,34 @@ namespace TransplanterLib
             return "'" + filename +
                 ((string.IsNullOrEmpty(arguments)) ? string.Empty : " " + arguments) +
                 "'";
+        }
+
+        public static int VerifyPCC(string pcc)
+        {
+            try
+            {
+                PCCObject obj = new PCCObject(pcc);
+                foreach (PCCObject.ImportEntry imp in obj.Imports)
+                {
+                    String teststr = imp.ClassName;
+                    int testval = imp.idxObjectName;
+                    teststr = imp.PackageName;
+                }
+                foreach (PCCObject.ExportEntry exp in obj.Exports)
+                {
+                    String teststr = exp.ArchtypeName;
+                    int testval = exp.DataSize;
+                    byte[] data = exp.Data;
+                }
+                Console.WriteLine("PCC Loaded OK");
+                return 0;
+            }
+            catch (Exception e)
+            {
+                Console.Error.WriteLine("PCC Failed to load, threw exception: ");
+                Console.Error.WriteLine(e.ToString());
+                return 1;
+            }
         }
 
         /// <summary>
@@ -604,7 +633,7 @@ namespace TransplanterLib
                             PCCObject.ImportEntry imp = pcc.Imports[x];
                             if (imp.PackageFullName != "Class" && imp.PackageFullName != "Package")
                             {
-                                stringoutput.WriteLine("#"+((x+1)*-1) + ": " + imp.PackageFullName + "." + imp.ObjectName + "(From: " + imp.PackageFile + ") " +
+                                stringoutput.WriteLine("#" + ((x + 1) * -1) + ": " + imp.PackageFullName + "." + imp.ObjectName + "(From: " + imp.PackageFile + ") " +
                                     "(Offset: 0x " + (pcc.ImportOffset + (x * PCCObject.ImportEntry.byteSize)).ToString("X4") + ")");
                             }
                             else
