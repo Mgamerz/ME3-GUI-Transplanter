@@ -5,8 +5,8 @@ using System.Linq;
 using System.Text;
 using Gibbed.IO;
 using AmaroK86.MassEffect3.ZlibBlock;
+using System.Diagnostics;
 using System.Reflection;
-using System.ComponentModel;
 
 namespace TransplanterLib
 {
@@ -21,6 +21,7 @@ namespace TransplanterLib
         private uint magic { get { return BitConverter.ToUInt32(header, 0); } }
         private ushort lowVers { get { return BitConverter.ToUInt16(header, 4); } }
         private ushort highVers { get { return BitConverter.ToUInt16(header, 6); } }
+        private uint HeaderLength { get { return BitConverter.ToUInt32(header, 8); } set { Buffer.BlockCopy(BitConverter.GetBytes(value), 0, header, 8, sizeof(uint)); } }
         private int nameSize { get { int val = BitConverter.ToInt32(header, 12); return (val < 0) ? val * -2 : val; } } // usually = 10
         public uint flags { get { return BitConverter.ToUInt32(header, 16 + nameSize); } }
 
@@ -68,9 +69,11 @@ namespace TransplanterLib
                 Buffer.BlockCopy(BitConverter.GetBytes(value), 0, header, idxOffsets + 64, sizeof(int));
             }
         }
-        int ExportOffset { get { return BitConverter.ToInt32(header, idxOffsets + 12); } set { Buffer.BlockCopy(BitConverter.GetBytes(value), 0, header, idxOffsets + 12, sizeof(int)); } }
+        int ExportOffset { get { Debug.WriteLine("idxOffsets: " + idxOffsets + ", offset for export offset: " + (idxOffsets + 12)); return BitConverter.ToInt32(header, idxOffsets + 12); } set { Buffer.BlockCopy(BitConverter.GetBytes(value), 0, header, idxOffsets + 12, sizeof(int)); } }
         int ImportCount { get { return BitConverter.ToInt32(header, idxOffsets + 16); } set { Buffer.BlockCopy(BitConverter.GetBytes(value), 0, header, idxOffsets + 16, sizeof(int)); } }
         public int ImportOffset { get { return BitConverter.ToInt32(header, idxOffsets + 20); } set { Buffer.BlockCopy(BitConverter.GetBytes(value), 0, header, idxOffsets + 20, sizeof(int)); } }
+        public uint FreeZoneStart { get { return BitConverter.ToUInt32(header, idxOffsets + 24); } set { Buffer.BlockCopy(BitConverter.GetBytes(value), 0, header, idxOffsets + 24, sizeof(uint)); } }
+        public uint FreeZoneEnd { get { return BitConverter.ToUInt32(header, idxOffsets + 28); } set { Buffer.BlockCopy(BitConverter.GetBytes(value), 0, header, idxOffsets + 28, sizeof(uint)); } }
 
         int expInfoEndOffset { get { return BitConverter.ToInt32(header, idxOffsets + 24); } set { Buffer.BlockCopy(BitConverter.GetBytes(value), 0, header, idxOffsets + 24, sizeof(int)); } }
         int expDataBegOffset
@@ -99,23 +102,109 @@ namespace TransplanterLib
             public bool bRead = false;
         }
 
-        public class ImportEntry
+        public interface IEntry
+        {
+            string ClassName { get; }
+            string GetFullPath { get; }
+            int idxLink { get; }
+            int idxObjectName { get; }
+            int indexValue { get; }
+            string ObjectName { get; }
+            string PackageFullName { get; }
+            string PackageName { get; }
+        }
+
+        public class ImportEntry : IEntry
         {
             public static int byteSize = 28;
-            internal byte[] data = new byte[byteSize];
+            internal byte[] header = new byte[byteSize];
             internal PCCObject pccRef;
-            public int Link;
 
-            public int idxPackageFile { get { return BitConverter.ToInt32(data, 0); } private set { Buffer.BlockCopy(BitConverter.GetBytes(value), 0, data, 0, sizeof(int)); } }
-            public int idxClassName { get { return BitConverter.ToInt32(data, 8); } private set { Buffer.BlockCopy(BitConverter.GetBytes(value), 0, data, 8, sizeof(int)); } }
-            public int idxPackageName { get { return BitConverter.ToInt32(data, 16) - 1; } private set { Buffer.BlockCopy(BitConverter.GetBytes(value + 1), 0, data, 16, sizeof(int)); } }
-            public int idxObjectName { get { return BitConverter.ToInt32(data, 20); } private set { Buffer.BlockCopy(BitConverter.GetBytes(value), 0, data, 20, sizeof(int)); } }
-            public int idxLink { get { return BitConverter.ToInt32(data, 16); } private set { Buffer.BlockCopy(BitConverter.GetBytes(value), 0, data, 16, sizeof(int)); } }
-            public int ObjectFlags { get { return BitConverter.ToInt32(data, 24); } private set { Buffer.BlockCopy(BitConverter.GetBytes(value), 0, data, 24, sizeof(int)); } }
+            public int idxPackageFile { get { return BitConverter.ToInt32(header, 0); } set { Buffer.BlockCopy(BitConverter.GetBytes(value), 0, header, 0, sizeof(int)); } }
+            public int idxClassName { get { return BitConverter.ToInt32(header, 8); } set { Buffer.BlockCopy(BitConverter.GetBytes(value), 0, header, 8, sizeof(int)); } }
+            public int idxLink { get { return BitConverter.ToInt32(header, 16); } set { Buffer.BlockCopy(BitConverter.GetBytes(value), 0, header, 16, sizeof(int)); } }
+            public int idxObjectName { get { return BitConverter.ToInt32(header, 20); } set { Buffer.BlockCopy(BitConverter.GetBytes(value), 0, header, 20, sizeof(int)); } }
+            public int indexValue { get { return BitConverter.ToInt32(header, 24); } set { Buffer.BlockCopy(BitConverter.GetBytes(value), 0, header, 24, sizeof(int)); } }
 
             public string ClassName { get { return pccRef.Names[idxClassName]; } }
-            public string PackageFile { get { return pccRef.Names[idxPackageFile]; } }
+            public string PackageFile { get { return pccRef.Names[idxPackageFile] + ".pcc"; } }
             public string ObjectName { get { return pccRef.Names[idxObjectName]; } }
+            public string PackageName
+            {
+                get
+                {
+                    int val = idxLink;
+                    if (val != 0)
+                    {
+                        IEntry entry = pccRef.getEntry(val);
+                        return pccRef.Names[entry.idxObjectName];
+                    }
+                    else return "Package";
+                }
+            }
+            public string PackageFullName
+            {
+                get
+                {
+                    string result = PackageName;
+                    int idxNewPackName = idxLink;
+
+                    while (idxNewPackName != 0)
+                    {
+                        string newPackageName = pccRef.getEntry(idxNewPackName).PackageName;
+                        if (newPackageName != "Package")
+                            result = newPackageName + "." + result;
+                        idxNewPackName = pccRef.getEntry(idxNewPackName).idxLink;
+                    }
+                    return result;
+                }
+            }
+
+            public string GetFullPath
+            {
+                get
+                {
+                    string s = "";
+                    if (PackageFullName != "Class" && PackageFullName != "Package")
+                        s += PackageFullName + ".";
+                    s += ObjectName;
+                    return s;
+                }
+            }
+
+            public ImportEntry(PCCObject pccFile, byte[] importData)
+            {
+                pccRef = pccFile;
+                header = (byte[])importData.Clone();
+            }
+
+            public ImportEntry(PCCObject pccFile, Stream importData)
+            {
+                pccRef = pccFile;
+                header = new byte[ImportEntry.byteSize];
+                importData.Read(header, 0, header.Length);
+            }
+        }
+
+        public class ExportEntry : IEntry, ICloneable // class containing info about export entry (header info + data)
+        {
+            internal byte[] header; // holds data about export header, not the export data.
+            public PCCObject pccRef;
+            public uint offset { get; set; }
+
+            public int idxClass { get { return BitConverter.ToInt32(header, 0); } set { Buffer.BlockCopy(BitConverter.GetBytes(value), 0, header, 0, sizeof(int)); } }
+            public int idxClassParent { get { return BitConverter.ToInt32(header, 4); } set { Buffer.BlockCopy(BitConverter.GetBytes(value), 0, header, 4, sizeof(int)); } }
+            public int idxLink { get { return BitConverter.ToInt32(header, 8); } set { Buffer.BlockCopy(BitConverter.GetBytes(value), 0, header, 8, sizeof(int)); } }
+            public int idxPackageName { get { return BitConverter.ToInt32(header, 8) - 1; } set { Buffer.BlockCopy(BitConverter.GetBytes(value + 1), 0, header, 8, sizeof(int)); } }
+            public int idxObjectName { get { return BitConverter.ToInt32(header, 12); } set { Buffer.BlockCopy(BitConverter.GetBytes(value), 0, header, 12, sizeof(int)); } }
+            public int indexValue { get { return BitConverter.ToInt32(header, 16); } set { Buffer.BlockCopy(BitConverter.GetBytes(value), 0, header, 16, sizeof(int)); } }
+            public int idxArchtype { get { return BitConverter.ToInt32(header, 20); } set { Buffer.BlockCopy(BitConverter.GetBytes(value), 0, header, 20, sizeof(int)); } }
+            public long ObjectFlags { get { return BitConverter.ToInt64(header, 24); } set { Buffer.BlockCopy(BitConverter.GetBytes(value), 0, header, 24, sizeof(long)); } }
+
+            public string ObjectName { get { return pccRef.Names[idxObjectName]; } }
+            public string ClassName { get { int val = idxClass; if (val != 0) return pccRef.Names[pccRef.getEntry(val).idxObjectName]; else return "Class"; } }
+            public string ClassParent { get { int val = idxClassParent; if (val != 0) return pccRef.Names[pccRef.getEntry(val).idxObjectName]; else return "Class"; } }
+            public string ClassParentWrapped { get { int val = idxClassParent; if (val < 0) return "(Import " + ((val * -1) - 1) + " " + pccRef.Names[pccRef.Imports[val * -1 - 1].idxObjectName] + ")"; else if (val > 0) return "[Export " + (val - 1) + " " + pccRef.Names[pccRef.Exports[val].idxObjectName] + "]"; else return "Class"; } }
             public string PackageName { get { int val = idxPackageName; if (val >= 0) return pccRef.Names[pccRef.Exports[val].idxObjectName]; else return "Package"; } }
             public string PackageFullName
             {
@@ -135,69 +224,31 @@ namespace TransplanterLib
                 }
             }
 
-            public ImportEntry(PCCObject pccFile, byte[] importData)
-            {
-                pccRef = pccFile;
-                data = (byte[])importData.Clone();
-            }
-
-            public ImportEntry(PCCObject pccFile, Stream importData)
-            {
-                pccRef = pccFile;
-                data = new byte[ImportEntry.byteSize];
-                importData.Read(data, 0, data.Length);
-            }
-        }
-
-        public class ExportEntry : ICloneable // class containing info about export entry (header info + data)
-        {
-            internal byte[] info; // holds data about export header, not the export data.
-            public PCCObject pccRef;
-            public uint offset { get; set; }
-            public int Link; // deprecated var, soon will be removed
-
-            public int idxClassName { get { return BitConverter.ToInt32(info, 0); } set { Buffer.BlockCopy(BitConverter.GetBytes(value), 0, info, 0, sizeof(int)); } }
-            public int idxClassParent { get { return BitConverter.ToInt32(info, 4); } set { Buffer.BlockCopy(BitConverter.GetBytes(value), 0, info, 4, sizeof(int)); } }
-            public int idxLink { get { return BitConverter.ToInt32(info, 8); } set { Buffer.BlockCopy(BitConverter.GetBytes(value), 0, info, 8, sizeof(int)); } }
-            public int idxPackageName { get { return BitConverter.ToInt32(info, 8) - 1; } set { Buffer.BlockCopy(BitConverter.GetBytes(value + 1), 0, info, 8, sizeof(int)); } }
-            public int idxObjectName { get { return BitConverter.ToInt32(info, 12); } set { Buffer.BlockCopy(BitConverter.GetBytes(value), 0, info, 12, sizeof(int)); } }
-            public int indexValue { get { return BitConverter.ToInt32(info, 16); } private set { Buffer.BlockCopy(BitConverter.GetBytes(value), 0, info, 16, sizeof(int)); } }
-            public int idxArchtypeName { get { return BitConverter.ToInt32(info, 20); } private set { Buffer.BlockCopy(BitConverter.GetBytes(value), 0, info, 20, sizeof(int)); } }
-            public long ObjectFlags { get { return BitConverter.ToInt64(info, 24); } set { Buffer.BlockCopy(BitConverter.GetBytes(value), 0, info, 64, sizeof(long)); } }
-
-            public string ObjectName { get { return pccRef.Names[idxObjectName]; } }
-            public string ClassName { get { int val = idxClassName; if (val < 0) return pccRef.Names[pccRef.Imports[val * -1 - 1].idxObjectName]; else if (val > 0) return pccRef.Names[pccRef.Exports[val].idxObjectName]; else return "Class"; } }
-            public string ClassParent { get { int val = idxClassParent; if (val < 0) return pccRef.Names[pccRef.Imports[val * -1 - 1].idxObjectName]; else if (val > 0) return pccRef.Names[pccRef.Exports[val].idxObjectName]; else return "Class"; } }
-            public string ClassParentWrapped { get { int val = idxClassParent; if (val < 0) return "(Import " + ((val * -1) - 1) + " " + pccRef.Names[pccRef.Imports[val * -1 - 1].idxObjectName] + ")"; else if (val > 0) return "[Export " + (val - 1) + " " + pccRef.Names[pccRef.Exports[val].idxObjectName] + "]"; else return "Class"; } }
-            public bool likelyCoalescedVal
-            {
-                get
-                {
-                    return (Data.Length < 25) ? false : ((Data[25] & 64) > 0); //0x40
-                }
-                set { }
-            }
-            public string getCoalByte
-            {
-                get
-                {
-                    return (Data.Length < 25) ? "[N/A]" : "[CB: 0x"+(Data[25].ToString("X2") +"]"); //0x40
-                }
-                set { }
-            }
-            public string PackageName { get { int val = idxPackageName; if (val >= 0) return pccRef.Names[pccRef.Exports[val].idxObjectName]; else return "Package"; } }
-            public string PackageFullName
+            public string ContainingPackage
             {
                 get
                 {
                     string result = PackageName;
+                    if (result.EndsWith(ObjectName))
+                    {
+                        result = "";
+                    }
                     int idxNewPackName = idxPackageName;
 
                     while (idxNewPackName >= 0)
                     {
                         string newPackageName = pccRef.Exports[idxNewPackName].PackageName;
                         if (newPackageName != "Package")
-                            result = newPackageName + "." + result;
+                        {
+                            if (!result.Equals(""))
+                            {
+                                result = newPackageName + "." + result;
+                            }
+                            else
+                            {
+                                result = newPackageName;
+                            }
+                        }
                         idxNewPackName = pccRef.Exports[idxNewPackName].idxPackageName;
                     }
                     return result;
@@ -215,10 +266,10 @@ namespace TransplanterLib
                     return s;
                 }
             }
-            public string ArchtypeName { get { int val = idxArchtypeName; if (val < 0) return pccRef.Names[pccRef.Imports[val * -1 - 1].idxObjectName]; else if (val > 0) return pccRef.Names[pccRef.Exports[val].idxObjectName]; else return "None"; } }
+            public string ArchtypeName { get { int val = idxArchtype; if (val < 0) return pccRef.Names[pccRef.Imports[val * -1 - 1].idxObjectName]; else if (val > 0) return pccRef.Names[pccRef.Exports[val - 1].idxObjectName]; else return "None"; } }
 
-            public int DataSize { get { return BitConverter.ToInt32(info, 32); } internal set { Buffer.BlockCopy(BitConverter.GetBytes(value), 0, info, 32, sizeof(int)); } }
-            public int DataOffset { get { return BitConverter.ToInt32(info, 36); } internal set { Buffer.BlockCopy(BitConverter.GetBytes(value), 0, info, 36, sizeof(int)); } }
+            public int DataSize { get { return BitConverter.ToInt32(header, 32); } internal set { Buffer.BlockCopy(BitConverter.GetBytes(value), 0, header, 32, sizeof(int)); } }
+            public int DataOffset { get { return BitConverter.ToInt32(header, 36); } internal set { Buffer.BlockCopy(BitConverter.GetBytes(value), 0, header, 36, sizeof(int)); } }
             public int DataOffsetTmp;
             byte[] _data = null;
             public byte[] Data // holds data about export data
@@ -228,19 +279,27 @@ namespace TransplanterLib
                     // if data isn't loaded then fill it from pcc file (load-on-demand)
                     if (_data == null)
                     {
-                        pccRef.getData(DataOffset);
+                        pccRef.getData(DataOffset, this);
                     }
                     return _data;
                 }
 
                 set { _data = value; hasChanged = true; }
             }
+            public bool likelyCoalescedVal
+            {
+                get
+                {
+                    return (Data.Length < 25) ? false : (Data[25] == 64); //0x40
+                }
+                set { }
+            }
             public bool hasChanged { get; internal set; }
 
             public ExportEntry(PCCObject pccFile, byte[] importData, uint exportOffset)
             {
                 pccRef = pccFile;
-                info = (byte[])importData.Clone();
+                header = (byte[])importData.Clone();
                 offset = exportOffset;
                 hasChanged = false;
             }
@@ -259,8 +318,19 @@ namespace TransplanterLib
             {
                 ExportEntry newExport = (ExportEntry)this.MemberwiseClone(); // copy all reference-types vars
                 // now creates new copies of referenced objects
-                newExport.info = (byte[])this.info.Clone();
+                newExport.header = (byte[])this.header.Clone();
                 newExport.Data = (byte[])this.Data.Clone();
+                int index = 0;
+                string name = ObjectName;
+                foreach (ExportEntry ent in pccRef.Exports)
+                {
+                    if (ObjectName == ent.ObjectName && ent.indexValue > index)
+                    {
+                        index = ent.indexValue;
+                    }
+                }
+                index++;
+                newExport.indexValue = index;
                 return newExport;
             }
         }
@@ -375,20 +445,31 @@ namespace TransplanterLib
                 listsStream.Seek(NameOffset, SeekOrigin.Begin);
                 for (int i = 0; i < NameCount; i++)
                 {
+                    long currOffset = listsStream.Position;
                     int strLength = listsStream.ReadValueS32();
-                    Names.Add(listsStream.ReadString(strLength * -2, true, Encoding.Unicode));
+                    string str = listsStream.ReadString(strLength * -2, true, Encoding.Unicode);
+                    //Debug.WriteLine("Read name "+i+" "+str+" length: " + strLength+", offset: "+currOffset);
+                    Names.Add(str);
                 }
+                //Debug.WriteLine("Names done. Current offset: "+listsStream.Position);
+                //Debug.WriteLine("Import Offset: " + ImportOffset);
 
                 // fill import list
+                //Console.Out.WriteLine("IMPORT OFFSET: " + ImportOffset);
                 listsStream.Seek(ImportOffset, SeekOrigin.Begin);
                 byte[] buffer = new byte[ImportEntry.byteSize];
                 for (int i = 0; i < ImportCount; i++)
                 {
-                    Imports.Add(new ImportEntry(this, listsStream));
-                }
+
+                    long offset = listsStream.Position;
+                    ImportEntry e = new ImportEntry(this, listsStream);
+                    Imports.Add(e);
+                    //Debug.WriteLine("Read import " + i + " " + e.ObjectName + ", offset: " + offset);
+                };
 
                 // fill export list (only the headers, not the data)
                 listsStream.Seek(ExportOffset, SeekOrigin.Begin);
+                //Console.Out.WriteLine("Export OFFSET: " + ImportOffset);
                 for (int i = 0; i < ExportCount; i++)
                 {
                     uint expInfoOffset = (uint)listsStream.Position;
@@ -401,9 +482,12 @@ namespace TransplanterLib
                     buffer = new byte[expInfoSize];
 
                     listsStream.Read(buffer, 0, buffer.Length);
-                    Exports.Add(new ExportEntry(this, buffer, expInfoOffset));
+                    ExportEntry e = new ExportEntry(this, buffer, expInfoOffset);
+                    //Debug.WriteLine("Read export " + i + " " + e.ObjectName + ", offset: " + expInfoOffset+ ", size: "+expInfoSize); 
+                    Exports.Add(e);
                 }
             }
+            Debug.WriteLine(getMetadataString());
         }
 
         public PCCObject()
@@ -414,7 +498,7 @@ namespace TransplanterLib
         ///     given export data offset, the function recovers it from the file.
         /// </summary>
         /// <param name="offset">offset position of desired export data</param>
-        private void getData(int offset)
+        private void getData(int offset, ExportEntry exp = null)
         {
             byte[] buffer;
             if (bCompressed)
@@ -444,8 +528,16 @@ namespace TransplanterLib
             }
             else
             {
-                int expIndex = Exports.FindIndex(export => export.DataOffset <= offset && export.DataOffset + export.DataSize > offset);
-                ExportEntry expSelect = Exports[expIndex];
+                ExportEntry expSelect;
+                if (exp == null)
+                {
+                    int expIndex = Exports.FindIndex(export => export.DataOffset <= offset && export.DataOffset + export.DataSize > offset);
+                    expSelect = Exports[expIndex];
+                }
+                else
+                {
+                    expSelect = exp;
+                }
                 using (FileStream pccStream = File.OpenRead(pccFileName))
                 {
                     buffer = new byte[expSelect.DataSize];
@@ -471,14 +563,9 @@ namespace TransplanterLib
         /// </summary>
         /// <param name="newFileName">set full path + file name.</param>
         /// <param name="saveCompress">set true if you want a zlib compressed pcc file.</param>
-        /// <param name="worker">worker to report progress back to for saving.</param>
-        public void saveToFile(string newFileName = null, bool saveCompress = false, BackgroundWorker worker = null)
+        public void saveToFile(string newFileName = null, bool saveCompress = false)
         {
             bool bOverwriteFile = false;
-            if (worker != null)
-            {
-                worker.ReportProgress(0, "Saving PCC File");
-            }
 
             if (string.IsNullOrWhiteSpace(newFileName) || newFileName == pccFileName)
             {
@@ -486,8 +573,13 @@ namespace TransplanterLib
                 newFileName = Path.GetFullPath(pccFileName) + ".tmp";
             }
 
+            if (bDLCStored)
+                saveCompress = false;
+
             using (MemoryStream newPccStream = new MemoryStream())
             {
+                //ME3Explorer.DebugOutput.Clear();
+                Console.WriteLine("writing names list...");
 
                 // this condition needs a deeper check. todo...
                 if (bExtraNamesList)
@@ -506,19 +598,22 @@ namespace TransplanterLib
                     newPccStream.WriteString(name + "\0", (uint)(name.Length + 1) * 2, Encoding.Unicode);
                 }
 
+                Console.WriteLine("writing imports list...");
+
                 //writing import infos
                 ImportOffset = (int)newPccStream.Position;
                 ImportCount = Imports.Count;
                 foreach (ImportEntry import in Imports)
-                    newPccStream.Write(import.data, 0, import.data.Length);
+                    newPccStream.Write(import.header, 0, import.header.Length);
 
                 //updating general export infos
                 ExportOffset = (int)newPccStream.Position;
                 ExportCount = Exports.Count;
-                expInfoEndOffset = ExportOffset + Exports.Sum(export => export.info.Length);
+                expInfoEndOffset = ExportOffset + Exports.Sum(export => export.header.Length);
                 expDataBegOffset = expInfoEndOffset;
 
                 // WV code stuff...
+                Console.WriteLine("writing export data...");
                 int counter = 0;
                 int breaker = Exports.Count / 100;
                 if (breaker == 0)
@@ -527,10 +622,21 @@ namespace TransplanterLib
                 //updating general export infos
                 ExportOffset = (int)newPccStream.Position;
                 ExportCount = Exports.Count;
-                expInfoEndOffset = ExportOffset + Exports.Sum(export => export.info.Length);
+                expInfoEndOffset = ExportOffset + Exports.Sum(export => export.header.Length);
                 if (expDataBegOffset < expInfoEndOffset)
                     expDataBegOffset = expInfoEndOffset;
 
+                //writing export data
+                /*newPccStream.Seek(expDataBegOffset, SeekOrigin.Begin);
+                foreach (ExportEntry export in Exports)
+                {
+                    //updating info values
+                    export.DataSize = export.Data.Length;
+                    export.DataOffset = (int)newPccStream.Position;
+
+                    //writing data
+                    newPccStream.Write(export.Data, 0, export.Data.Length);
+                }*/
                 //writing export data
                 List<ExportEntry> unchangedExports = Exports.Where(export => !export.hasChanged || (export.hasChanged && export.Data.Length <= export.DataSize)).ToList();
                 List<ExportEntry> changedExports = Exports.Where(export => export.hasChanged && export.Data.Length > export.DataSize).ToList();
@@ -560,18 +666,25 @@ namespace TransplanterLib
                     newPccStream.Write(export.Data, 0, export.Data.Length);
                 }
 
+                //if (Exports.Any(x => x.Data == null))
+                //    throw new Exception("values null!!");
+
                 //writing export info
                 newPccStream.Seek(ExportOffset, SeekOrigin.Begin);
-                for (int i = 0; i < Exports.Count; i++)
+                foreach (ExportEntry export in Exports)
                 {
-                    ExportEntry export = Exports[i];
-                    newPccStream.Write(export.info, 0, export.info.Length);
-                    if (worker != null)
-                    {
-                        worker.ReportProgress((int)(((double)i) / Exports.Count) * 100);
-                    }
+                    newPccStream.Write(export.header, 0, export.header.Length);
                 }
+                /*foreach (ExportEntry export in unchangedExports)
+                {
+                    newPccStream.Write(export.info, 0, export.info.Length);
+                }
+                foreach (ExportEntry export in changedExports)
+                {
+                    newPccStream.Write(export.info, 0, export.info.Length);
+                }*/
 
+                Console.WriteLine("writing header...");
 
                 //writing header
                 bCompressed = false;
@@ -581,6 +694,7 @@ namespace TransplanterLib
 
                 if (saveCompress)
                 {
+                    Console.WriteLine("Compressing PCC...");
                     PCCHandler.CompressAndSave(newPccStream, newFileName);
                 }
                 else
@@ -597,6 +711,84 @@ namespace TransplanterLib
                 File.Delete(pccFileName);
                 File.Move(newFileName, pccFileName);
             }
+           // DebugOutput.PrintLn(Path.GetFileName(pccFileName) + " has been saved.");
+        }
+
+        //an attempt to emulate ME3Creator's save method
+        public void saveByReconstructing(string path)
+        {
+            //load in all data
+            byte[] buff;
+            foreach (ExportEntry e in Exports)
+            {
+                buff = e.Data;
+            }
+
+            try
+            {
+                MemoryStream m = new MemoryStream();
+                m.WriteBytes(header);
+                //name table
+                NameOffset = (int)m.Position;
+                NameCount = Names.Count;
+                foreach (string s in Names)
+                {
+                    string text = s;
+                    if (!text.EndsWith("\0"))
+                    {
+                        text += "\0";
+                    }
+                    m.Write(BitConverter.GetBytes(-text.Length), 0, 4);
+                    foreach (char c in text)
+                    {
+                        m.WriteByte((byte)c);
+                        m.WriteByte(0);
+                    }
+                }
+                //import table
+                ImportOffset = (int)m.Position;
+                ImportCount = Imports.Count;
+                foreach (ImportEntry e in Imports)
+                {
+                    m.WriteBytes(e.header);
+                }
+                //export table
+                ExportOffset = (int)m.Position;
+                ExportCount = Exports.Count;
+                for (int i = 0; i < Exports.Count; i++)
+                {
+                    ExportEntry e = Exports[i];
+                    e.offset = (uint)m.Position;
+                    m.WriteBytes(e.header);
+                }
+                //freezone
+                int FreeZoneSize = (int)FreeZoneEnd - (int)FreeZoneStart;
+                FreeZoneStart = (uint)m.Position;
+                m.Write(new byte[FreeZoneSize], 0, FreeZoneSize);
+                FreeZoneEnd = HeaderLength = (uint)m.Position;
+                //export data
+                for (int i = 0; i < Exports.Count; i++)
+                {
+                    ExportEntry e = Exports[i];
+                    e.DataOffset = (int)m.Position;
+                    e.DataSize = e.Data.Length;
+                    m.WriteBytes(e.Data);
+                    long pos = m.Position;
+                    m.Seek(e.offset + 32, SeekOrigin.Begin);
+                    m.Write(BitConverter.GetBytes(e.DataSize), 0, 4);
+                    m.Write(BitConverter.GetBytes(e.DataOffset), 0, 4);
+                    m.Seek(pos, SeekOrigin.Begin);
+                }
+                //update header
+                m.Seek(0, SeekOrigin.Begin);
+                m.WriteBytes(header);
+
+                File.WriteAllBytes(path, m.ToArray());
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine("PCC Save error:\n" + ex.ToString());
+            }
         }
 
         public string getNameEntry(int index)
@@ -608,19 +800,19 @@ namespace TransplanterLib
 
         public string getObjectName(int index)
         {
-            if (index > 0 && index < ExportCount)
+            if (index > 0 && index <= ExportCount)
                 return Exports[index - 1].ObjectName;
-            if (index * -1 > 0 && index * -1 < ImportCount)
-                return Imports[index * -1 - 1].ObjectName;
+            if (-index > 0 && -index <= ImportCount)
+                return Imports[-index - 1].ObjectName;
             return "";
         }
 
         public string getObjectClass(int index)
         {
-            if (index > 0 && index < ExportCount)
+            if (index > 0 && index <= ExportCount)
                 return Exports[index - 1].ClassName;
-            if (index * -1 > 0 && index * -1 < ImportCount)
-                return Imports[index * -1 - 1].ClassName;
+            if (-index > 0 && -index <= ImportCount)
+                return Imports[-index - 1].ClassName;
             return "";
         }
 
@@ -642,6 +834,19 @@ namespace TransplanterLib
             return s;
         }
 
+        /// <summary>
+        ///     gets Export or Import entry
+        /// </summary>
+        /// <param name="index">unreal index</param>
+        public IEntry getEntry(int index)
+        {
+            if (index > 0 && index <= ExportCount)
+                return Exports[index - 1];
+            if (-index > 0 && -index <= ImportCount)
+                return Imports[-index - 1];
+            return null;
+        }
+
         public bool isName(int index)
         {
             return (index >= 0 && index < Names.Count);
@@ -655,9 +860,19 @@ namespace TransplanterLib
             return (index >= 0 && index < Exports.Count);
         }
 
+        public int FindNameOrAdd(string name)
+        {
+            for (int i = 0; i < Names.Count; i++)
+                if (Names[i] == name)
+                    return i;
+            Names.Add(name);
+            return Names.Count - 1;
+        }
+
         public void addName(string name)
         {
-            Names.Add(name);
+            if (!Names.Contains(name))
+                Names.Add(name);
         }
 
         public void addImport(PCCObject.ImportEntry importEntry)
@@ -668,7 +883,7 @@ namespace TransplanterLib
             Imports.Add(importEntry);
         }
 
-        public void addExport(PCCObject.ExportEntry exportEntry)
+        public void addExport(ExportEntry exportEntry)
         {
             if (exportEntry.pccRef != this)
                 throw new Exception("you cannot add a new export entry from another pcc file, it has invalid references!");
@@ -676,78 +891,115 @@ namespace TransplanterLib
             exportEntry.hasChanged = true;
 
             //changing data offset in order to append it at the end of the file
-            ExportEntry lastExport = Exports.Find(export => export.DataOffset == Exports.Max(entry => entry.DataOffset));
+            int maxOffset = Exports.Max(entry => entry.DataOffset);
+            ExportEntry lastExport = Exports.Find(export => export.DataOffset == maxOffset);
             int lastOffset = lastExport.DataOffset + lastExport.Data.Length;
             exportEntry.DataOffset = lastOffset;
 
             Exports.Add(exportEntry);
+            ExportCount = Exports.Count;
         }
 
         /// <summary>
         /// This method is an alternate way of saving PCCs
         /// Instead of reconstructing the PCC from the data taken, it instead copies across the existing
         /// data, appends new exports, updates the export list, changes the namelist location and updates the
-        /// value in the header. Overwrite existing data with new data.
+        /// value in the header
         /// </summary>
         /// <param name="newFileName">The filename to write to</param>
-        public string altxSaveToFile(string newFileName, int HeadeNameOffset = 34, BackgroundWorker worker = null)
+        /// <param name="attemptOverwrite">Do you wish to attempt to overwrite the existing export</param>
+        public string altSaveToFile(string newFileName, bool attemptOverwrite, int HeadeNameOffset = 34)
         {
             string rtValues = "";
-            string loc = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
-            if (!loc.EndsWith(@"\"))
-            {
-                loc += @"\";
-            }
+           // string loc = Path.GetDirectoryName(Application.ExecutablePath);
+
             //Check whether compressed
             if (this.bCompressed)
             {
-                //Run Decompress.exe
-                if (worker != null)
-                {
-                    worker.ReportProgress(0, "Decompressing PCC");
-                }
-                TransplanterLib.RunExternalExe(loc + "Decompress.exe", this.pccFileName, loc);
+                string exeLoc = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
+                System.Diagnostics.ProcessStartInfo procStartInfo = new System.Diagnostics.ProcessStartInfo(exeLoc + "\\exec\\Decompress.exe", "\"" + this.pccFileName + "\"");
+                procStartInfo.WorkingDirectory = Path.GetDirectoryName(exeLoc + "\\exec\\Decompress.exe");
+                procStartInfo.RedirectStandardOutput = true;
+                procStartInfo.UseShellExecute = false;
+                procStartInfo.CreateNoWindow = true;
+                System.Diagnostics.Process proc = new System.Diagnostics.Process();
+                proc.StartInfo = procStartInfo;
+                proc.Start();
+                proc.WaitForExit();
+                //MessageBox.Show("Decompression complete");
             }
-
-            if (worker != null)
-            {
-                worker.ReportProgress(0, "Getting destination PCC ready...");
-            }
-
-            int numExports = ExportCount;
 
             //Get info
-            expInfoEndOffset = ExportOffset + Exports.Sum(export => export.info.Length);
+            expInfoEndOffset = ExportOffset + Exports.Sum(export => export.header.Length);
             if (expDataBegOffset < expInfoEndOffset)
                 expDataBegOffset = expInfoEndOffset;
             //List<ExportEntry> unchangedExports = Exports.Where(export => !export.hasChanged || (export.hasChanged && export.Data.Length <= export.DataSize)).ToList();
             List<ExportEntry> unchangedExports = Exports.Where(export => !export.hasChanged).ToList();
             List<ExportEntry> changedExports;
             List<ExportEntry> replaceExports = null;
-            //If we are trying to overwrite, then split up the exports that have been changed that can and can't overwrite the originals
-            changedExports = Exports.Where(export => export.hasChanged && export.Data.Length > export.DataSize).ToList();
-            replaceExports = Exports.Where(export => export.hasChanged && export.Data.Length <= export.DataSize).ToList();
-
+            if (!attemptOverwrite)
+            {
+                //If not trying to overwrite, then select all exports that have been changed
+                changedExports = Exports.Where(export => export.hasChanged).ToList();
+                //MessageBox.Show("No changed exports = " + changedExports.Count);
+                //throw new NullReferenceException();
+            }
+            else
+            {
+                //If we are trying to overwrite, then split up the exports that have been changed that can and can't overwrite the originals
+                changedExports = Exports.Where(export => export.hasChanged && export.Data.Length > export.DataSize).ToList();
+                replaceExports = Exports.Where(export => export.hasChanged && export.Data.Length <= export.DataSize).ToList();
+            }
             //ExportEntry lastExport = unchangedExports.Find(export => export.DataOffset == unchangedExports.Max(maxExport => maxExport.DataOffset));
-            if (worker != null)
-            {
-                worker.ReportProgress(0, "MARQUEE");
-            }
-
             ExportEntry lastExport = Exports.Find(export => export.DataOffset == Exports.Max(maxExport => maxExport.DataOffset));
-            if (worker != null)
-            {
-                worker.ReportProgress(0, "Saving PCC File");
-            }
-
             int lastDataOffset = lastExport.DataOffset + lastExport.DataSize;
             byte[] oldPCC = new byte[lastDataOffset];
             //byte[] oldName;
+
+            if (!attemptOverwrite)
+            {
+                int offset = ExportOffset;
+                foreach (ExportEntry export in Exports)
+                {
+                    if (!export.hasChanged)
+                    {
+                        offset += export.header.Length;
+                    }
+                    else
+                        break;
+                }
+                //rtValues += offset.ToString() + " ";
+                //using (FileStream stream = new FileStream(loc + "\\exec\\infoCache.bin", FileMode.Append))
+                //{
+                //    stream.Seek(0, SeekOrigin.End);
+                //    rtValues += stream.Position + " ";
+                //    //throw new FileNotFoundException();
+                //    stream.Write(changedExports[0].header, 32, 8);
+                //}
+            }
+
 
             using (FileStream oldPccStream = new FileStream(this.pccFileName, FileMode.Open))
             {
                 //Read the original data up to the last export
                 oldPccStream.Read(oldPCC, 0, lastDataOffset);
+                #region Unused code
+                /* Maybe implement this if I want to directly copy the names across.
+                 * Not useful at this time
+                if (NameOffset == 0x8E)
+                {
+                    oldName = new byte[ImportOffset - 0x8E];
+                    oldPccStream.Seek(0x8E, SeekOrigin.Begin);
+                    oldPccStream.Read(oldName, 0, (int)oldPccStream.Length - lastDataOffset);
+                }
+                else
+                {
+                    oldName = new byte[oldPccStream.Length - lastDataOffset];
+                    oldPccStream.Seek(lastDataOffset, SeekOrigin.Begin);
+                    oldPccStream.Read(oldName, 0, (int)oldPccStream.Length - lastDataOffset);
+                }
+                 * */
+                #endregion
             }
             //Start writing the new file
             using (FileStream newPCCStream = new FileStream(newFileName, FileMode.Create))
@@ -755,39 +1007,37 @@ namespace TransplanterLib
                 newPCCStream.Seek(0, SeekOrigin.Begin);
                 //Write the original file up til the last original export (note that this leaves in all the original exports)
                 newPCCStream.Write(oldPCC, 0, lastDataOffset);
-
-                //If we are then move to each offset and overwrite the data with the new exports
-                for (int i = 0; i < replaceExports.Count; i++)
+                if (!attemptOverwrite)
                 {
-                    ExportEntry export = replaceExports[i];
-                    newPCCStream.Seek(export.DataOffset, SeekOrigin.Begin);
-                    export.DataSize = export.Data.Length;
-                    newPCCStream.Write(export.Data, 0, export.Data.Length);
-                    if (worker != null)
+                    //If we're not trying to overwrite then just append all the changed exports
+                    foreach (ExportEntry export in changedExports)
                     {
-                        worker.ReportProgress((int)(((double)i / replaceExports.Count) * 100));
+                        export.DataOffset = (int)newPCCStream.Position;
+                        export.DataSize = export.Data.Length;
+                        newPCCStream.Write(export.Data, 0, export.Data.Length);
                     }
                 }
-
-
-                //Then move to the end and append the new data
-                //newPCCStream.Position = lastDataOffset;
-                newPCCStream.Seek(lastDataOffset, SeekOrigin.Begin);
-
-                for (int i = 0; i < changedExports.Count; i++)
+                else
                 {
-                    ExportEntry export = changedExports[i];
-                    export.DataOffset = (int)newPCCStream.Position;
-                    export.DataSize = export.Data.Length;
-                    newPCCStream.Write(export.Data, 0, export.Data.Length);
-                    if (worker != null)
+                    //If we are then move to each offset and overwrite the data with the new exports
+                    foreach (ExportEntry export in replaceExports)
                     {
-                        worker.ReportProgress((int)(((double)i / changedExports.Count) * 100));
+                        //newPCCStream.Position = export.DataOffset;
+                        newPCCStream.Seek(export.DataOffset, SeekOrigin.Begin);
+                        export.DataSize = export.Data.Length;
+                        newPCCStream.Write(export.Data, 0, export.Data.Length);
+                    }
+                    //Then move to the end and append the new data
+                    //newPCCStream.Position = lastDataOffset;
+                    newPCCStream.Seek(lastDataOffset, SeekOrigin.Begin);
+
+                    foreach (ExportEntry export in changedExports)
+                    {
+                        export.DataOffset = (int)newPCCStream.Position;
+                        export.DataSize = export.Data.Length;
+                        newPCCStream.Write(export.Data, 0, export.Data.Length);
                     }
                 }
-
-
-
                 //Set the new nameoffset and namecounts
                 NameOffset = (int)newPCCStream.Position;
                 NameCount = Names.Count;
@@ -810,19 +1060,29 @@ namespace TransplanterLib
                     nameHeader[i + 4] = nameOff[i];
                 newPCCStream.Write(nameHeader, 0, 8);
 
-
+                //update the import list
+                newPCCStream.Seek(ImportOffset, SeekOrigin.Begin);
+                foreach (ImportEntry import in Imports)
+                {
+                    newPCCStream.Write(import.header, 0, import.header.Length);
+                }
 
                 //Finally, update the export list
                 newPCCStream.Seek(ExportOffset, SeekOrigin.Begin);
-                for (int i = 0; i < numExports; i++)
+                foreach (ExportEntry export in Exports)
                 {
-                    ExportEntry export = Exports[i];
-                    newPCCStream.Write(export.info, 0, export.info.Length);
-                    if (worker != null)
-                    {
-                        worker.ReportProgress((int)(((double)i / numExports) * 100));
-                    }
+                    newPCCStream.Write(export.header, 0, export.header.Length);
                 }
+
+                //if (!attemptOverwrite)
+                //{
+                //    using (FileStream stream = new FileStream(loc + "\\exec\\infoCache.bin", FileMode.Append))
+                //    {
+                //        stream.Seek(0, SeekOrigin.End);
+                //        rtValues += stream.Position + " ";
+                //        stream.Write(changedExports[0].header, 32, 8);
+                //    }
+                //}
             }
             return rtValues;
         }
@@ -841,6 +1101,16 @@ namespace TransplanterLib
                     return i;
             }
             return -1;
+        }
+
+        public string getMetadataString()
+        {
+            string str = "PCC File Metadata";
+            str += "\nNames Offset: " + this.NameOffset;
+            str += "\nImports Offset: " + this.ImportOffset;
+            str += "\nExport Offset: " + this.ExportOffset;
+            return str;
+
         }
     }
 }

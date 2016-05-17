@@ -196,7 +196,7 @@ namespace Transplanter_CLI
                     else if (options.InputFolder != null)
                     {
                         Console.WriteLine("Injecting SWFs into " + options.TargetFile);
-                        replaceSWFs(options.InputFolder, options.TargetFile);
+                        endProgram(replaceSWFs(options.InputFolder, options.TargetFile));
                     }
                 }
                 else if (options.GuiExtract)

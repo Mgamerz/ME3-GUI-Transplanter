@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Text;
 using System.Diagnostics;
 using System.IO;
-using System.Reflection;
 using System.ComponentModel;
 
 namespace TransplanterLib
@@ -49,6 +48,7 @@ namespace TransplanterLib
             byte[] bytefooter = copyByteChunk(ent.Data, 32 + originalSize, ent.Data.Length - 32 - originalSize);
 
             MemoryStream m = new MemoryStream();
+            //updating array metadata, length, datasize
             for (int i = 0; i < header.Length; i++)
                 m.WriteByte(header[i]);
 
@@ -61,14 +61,18 @@ namespace TransplanterLib
             for (int i = 0; i < number2.Length; i++)
                 m.WriteByte(number2[i]);
 
+            //set swf binary data
             for (int i = 0; i < swf_file.Length; i++)
                 m.WriteByte(swf_file[i]);
 
+            //write remaining footer data that was there originally
             for (int i = 0; i < bytefooter.Length; i++)
                 m.WriteByte(bytefooter[i]);
-
+            byte[] newdata = m.ToArray();
+            Console.WriteLine("newdata size vs old: " + newdata.Length + " vs " + ent.Data.Length);
             ent.Data = m.ToArray();
-            ent.DataSize = ent.Data.Length;
+            Console.WriteLine("Export has changed: " + ent.hasChanged);
+            // ent.DataSize = ent.Data.Length;
         }
 
         static void extract_swf(PCCObject.ExportEntry ent, string filename)
@@ -183,9 +187,17 @@ namespace TransplanterLib
             }
             if (replaced)
             {
-                Console.WriteLine("Saving PCC (this may take a while...)");
-                //pcc.altSaveToFile(destinationFile, 34); //34 is default
-                pcc.saveToFile(destinationFile, false);
+                if (pcc.Exports.Exists(x => x.ObjectName == "SeekFreeShaderCache" && x.ClassName == "ShaderCache"))
+                {
+                    Console.WriteLine("Reconstructing PCC (this may take a while...)");
+
+                    pcc.saveByReconstructing(destinationFile);
+                }
+                else
+                {
+                    Console.WriteLine("Saving PCC (this may take a while...)");
+                    pcc.saveToFile(destinationFile, true);
+                }
             }
             else
             {
@@ -199,7 +211,7 @@ namespace TransplanterLib
         /// </summary>
         /// <param name="gfxSourceFolder">Source folder, with gfx files in the root.</param>
         /// <param name="destinationFile">File to update GFX files in</param>
-        public static void replaceSWFs(string gfxSourceFolder, string destinationFile, BackgroundWorker worker = null)
+        public static int replaceSWFs(string gfxSourceFolder, string destinationFile, BackgroundWorker worker = null)
         {
             bool replaced = false;
             string[] gfxfiles = System.IO.Directory.GetFiles(gfxSourceFolder, "*.swf");
@@ -248,20 +260,30 @@ namespace TransplanterLib
                 writeVerboseLine("Replaced " + numReplaced + " files, saving.");
                 if (replaced)
                 {
-                    Console.WriteLine("Saving Decompressed PCC (this may take a while...)");
-                    //pcc.altSaveToFile(destinationFile, 34, worker); //34 is default
-                    pcc.saveToFile(destinationFile, false, worker);
+                    //pcc.saveByReconstructing(destinationFile); //34 is default
+                    if (pcc.Exports.Exists(x => x.ObjectName == "SeekFreeShaderCache" && x.ClassName == "ShaderCache"))
+                    {
+                        Console.WriteLine("Saving PCC (this may take a while...)");
+                        pcc.saveToFile(destinationFile, true);
+                    }
+                    else
+                    {
+                        Console.WriteLine("Reconstructing PCC (this may take a while...)");
+                        pcc.saveByReconstructing(destinationFile);
+                    }
+                    return VerifyPCC(destinationFile);
                 }
                 else
                 {
                     Console.WriteLine("No SWFs replaced");
                     File.Move(backupfile, destinationFile);
-
+                    return 0;
                 }
             }
             else
             {
                 Console.WriteLine("No source GFX files were found.");
+                return 1;
             }
         }
 
@@ -283,6 +305,7 @@ namespace TransplanterLib
             try
             {
                 PCCObject obj = new PCCObject(pcc);
+
                 foreach (PCCObject.ImportEntry imp in obj.Imports)
                 {
                     String teststr = imp.ClassName;
@@ -298,9 +321,10 @@ namespace TransplanterLib
                 Console.WriteLine("PCC Loaded OK");
                 return 0;
             }
-            catch (Exception e)
+            catch (IOException e)
             {
                 Console.Error.WriteLine("PCC Failed to load, threw exception: ");
+                throw e;
                 Console.Error.WriteLine(e.ToString());
                 return 1;
             }
@@ -698,8 +722,7 @@ namespace TransplanterLib
                                 stringoutput.Write("#" + index + " ");
                                 if (isCoalesced)
                                 {
-                                    //stringoutput.Write("[C] ");
-                                    stringoutput.Write(exp.getCoalByte);
+                                    stringoutput.Write("[C] ");
                                 }
 
                                 if (exports || isCoalesced || isScript)
