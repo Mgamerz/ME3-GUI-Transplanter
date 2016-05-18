@@ -341,6 +341,7 @@ namespace TransplanterLib
         /// <param name="pccFilePath">full path + file name of desired pcc file.</param>
         public PCCObject(string pccFilePath, bool fullFileInMemory = false)
         {
+            Console.WriteLine("Loading pcc");
             Loaded = true;
             pccFileName = Path.GetFullPath(pccFilePath);
             using (FileStream pccStream = File.OpenRead(pccFileName))
@@ -371,6 +372,7 @@ namespace TransplanterLib
 
                 if (bCompressed)
                 {
+                    Console.WriteLine("PCC is compressed");
                     // seeks the blocks info position
                     pccStream.Seek(idxOffsets + 60, SeekOrigin.Begin);
                     int generator = pccStream.ReadValueS32();
@@ -418,20 +420,21 @@ namespace TransplanterLib
                 else
                 {
                     listsStream = pccStream;
-                    headerEnd = (int)NameOffset;
-
-                    // copying the extraNamesList
-                    int extraNamesLenght = headerEnd - headerSize;
-                    if (extraNamesLenght > 0)
-                    {
-                        extraNamesList = new byte[extraNamesLenght];
-                        listsStream.Seek(headerSize, SeekOrigin.Begin);
-                        listsStream.Read(extraNamesList, 0, extraNamesLenght);
-                        //FileStream fileStream = File.Create(Path.GetDirectoryName(pccFileName) + "\\temp.bin");
-                        //fileStream.Write(extraNamesList, 0, extraNamesLenght);
-                        //MessageBox.Show("posizione: " + pccStream.Position.ToString("X8"));
-                    }
                 }
+                    //    headerEnd = (int)NameOffset;
+
+                //    // copying the extraNamesList
+                //    int extraNamesLenght = headerEnd - headerSize;
+                //    if (extraNamesLenght > 0)
+                //    {
+                //        extraNamesList = new byte[extraNamesLenght];
+                //        listsStream.Seek(headerSize, SeekOrigin.Begin);
+                //        listsStream.Read(extraNamesList, 0, extraNamesLenght);
+                //        //FileStream fileStream = File.Create(Path.GetDirectoryName(pccFileName) + "\\temp.bin");
+                //        //fileStream.Write(extraNamesList, 0, extraNamesLenght);
+                //        //MessageBox.Show("posizione: " + pccStream.Position.ToString("X8"));
+                //    }
+                //}
 
                 /*if(bExtraNamesList)
                 {
@@ -448,6 +451,8 @@ namespace TransplanterLib
                     long currOffset = listsStream.Position;
                     int strLength = listsStream.ReadValueS32();
                     string str = listsStream.ReadString(strLength * -2, true, Encoding.Unicode);
+                    if (i < 10)
+                    Console.WriteLine("read string " + str + " at pos "+currOffset);
                     //Debug.WriteLine("Read name "+i+" "+str+" length: " + strLength+", offset: "+currOffset);
                     Names.Add(str);
                 }
@@ -460,8 +465,9 @@ namespace TransplanterLib
                 byte[] buffer = new byte[ImportEntry.byteSize];
                 for (int i = 0; i < ImportCount; i++)
                 {
-
                     long offset = listsStream.Position;
+                    if (i < 5)
+                        Console.WriteLine("Reading Import at " + offset);
                     ImportEntry e = new ImportEntry(this, listsStream);
                     Imports.Add(e);
                     //Debug.WriteLine("Read import " + i + " " + e.ObjectName + ", offset: " + offset);
@@ -597,14 +603,16 @@ namespace TransplanterLib
                     newPccStream.WriteValueS32(-(name.Length + 1));
                     newPccStream.WriteString(name + "\0", (uint)(name.Length + 1) * 2, Encoding.Unicode);
                 }
+                long nameBlockSize = newPccStream.Position - NameOffset;
 
                 Console.WriteLine("writing imports list...");
 
                 //writing import infos
-                ImportOffset = (int)newPccStream.Position;
+                ImportOffset = (int)newPccStream.Position; //imports are also being appended!
                 ImportCount = Imports.Count;
                 foreach (ImportEntry import in Imports)
                     newPccStream.Write(import.header, 0, import.header.Length);
+                long importBlockSize = newPccStream.Position - ImportOffset;
 
                 //updating general export infos
                 ExportOffset = (int)newPccStream.Position;
@@ -653,7 +661,17 @@ namespace TransplanterLib
                 }
 
                 ExportEntry lastExport = unchangedExports.Find(export => export.DataOffset == unchangedExports.Max(maxExport => maxExport.DataOffset));
-                int lastDataOffset = lastExport.DataOffset + lastExport.DataSize;
+                long lastDataOffset = lastExport.DataOffset + lastExport.DataSize;
+
+                if (lastDataOffset == NameOffset)
+                {
+                    lastDataOffset += nameBlockSize; //do not overwrite name table that has been appended.
+                }
+
+                if (lastDataOffset == ImportOffset)
+                {
+                    lastDataOffset += importBlockSize;
+                }
 
                 newPccStream.Seek(lastDataOffset, SeekOrigin.Begin);
                 foreach (ExportEntry export in changedExports)
@@ -665,6 +683,7 @@ namespace TransplanterLib
                     //writing data
                     newPccStream.Write(export.Data, 0, export.Data.Length);
                 }
+                Console.WriteLine("Post-changed exports, at pos " + newPccStream.Position);
 
                 //if (Exports.Any(x => x.Data == null))
                 //    throw new Exception("values null!!");
@@ -726,6 +745,7 @@ namespace TransplanterLib
 
             try
             {
+                this.bCompressed = false;
                 MemoryStream m = new MemoryStream();
                 m.WriteBytes(header);
                 //name table
