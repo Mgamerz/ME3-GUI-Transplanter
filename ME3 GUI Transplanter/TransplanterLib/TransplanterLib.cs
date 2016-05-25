@@ -189,14 +189,13 @@ namespace TransplanterLib
             {
                 if (pcc.Exports.Exists(x => x.ObjectName == "SeekFreeShaderCache" && x.ClassName == "ShaderCache"))
                 {
-                    Console.WriteLine("Reconstructing PCC (this may take a while...)");
-
-                    pcc.saveByReconstructing(destinationFile);
+                    Console.WriteLine("Saving PCC (this may take a while...)");
+                    pcc.saveToFile(destinationFile, true);
                 }
                 else
                 {
-                    Console.WriteLine("Saving PCC (this may take a while...)");
-                    pcc.saveToFile(destinationFile, true);
+                    Console.WriteLine("Reconstructing PCC...");
+                    pcc.saveByReconstructing(destinationFile);
                 }
             }
             else
