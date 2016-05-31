@@ -151,7 +151,7 @@ namespace TransplanterLib
         /// <param name="gfxFile">GFX file to insert (SWF)</param>
         /// <param name="destinationFile">File to update GFX files in</param>
         /// <param name="targetExport">Target export to scan for. If none is specified the filename is used as the packname/object name export to find</param>
-        public static void replaceSingleSWF(string gfxFile, string destinationFile, string targetExport = null)
+        public static int replaceSingleSWF(string gfxFile, string destinationFile, string targetExport = null)
         {
             string inpackobjname = Path.GetFileNameWithoutExtension(gfxFile);
             if (targetExport != null)
@@ -190,20 +190,37 @@ namespace TransplanterLib
                 if (pcc.Exports.Exists(x => x.ObjectName == "SeekFreeShaderCache" && x.ClassName == "ShaderCache"))
                 {
                     Console.WriteLine("Reconstructing PCC (this may take a while...)");
-
                     pcc.saveByReconstructing(destinationFile);
                 }
                 else
                 {
                     Console.WriteLine("Saving PCC (this may take a while...)");
-                    pcc.saveToFile(destinationFile, true);
+                    pcc.saveToFile(destinationFile, false);
                 }
+                return VerifyPCC(destinationFile);
+
             }
             else
             {
                 Console.WriteLine("No GFX file in the PCC with the name of " + inpackobjname + " was found.");
                 File.Move(backupfile, destinationFile);
+                return 1;
             }
+        }
+
+        public static Boolean doesPCCContainGUIs(string pccfilepath)
+        {
+            PCCObject pcc = new PCCObject(pccfilepath);
+            foreach (PCCObject.ExportEntry export in pcc.Exports)
+            {
+                if (export.ClassName == "GFxMovieInfo")
+                {
+                    string packobjname = export.PackageFullName + "." + export.ObjectName;
+                    //check if problem UI.
+
+                }
+            }
+            return false;
         }
 
         /// <summary>

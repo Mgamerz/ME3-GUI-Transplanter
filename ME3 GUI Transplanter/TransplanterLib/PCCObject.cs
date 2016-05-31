@@ -938,7 +938,7 @@ namespace TransplanterLib
             {
                 string exeLoc = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
                 System.Diagnostics.ProcessStartInfo procStartInfo = new System.Diagnostics.ProcessStartInfo(exeLoc + "\\exec\\Decompress.exe", "\"" + this.pccFileName + "\"");
-                procStartInfo.WorkingDirectory = Path.GetDirectoryName(exeLoc + "\\exec\\Decompress.exe");
+                procStartInfo.WorkingDirectory = Path.GetDirectoryName(exeLoc + "\\Decompress.exe");
                 procStartInfo.RedirectStandardOutput = true;
                 procStartInfo.UseShellExecute = false;
                 procStartInfo.CreateNoWindow = true;
