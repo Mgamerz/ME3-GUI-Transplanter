@@ -187,18 +187,9 @@ namespace TransplanterLib
             }
             if (replaced)
             {
-                if (pcc.Exports.Exists(x => x.ObjectName == "SeekFreeShaderCache" && x.ClassName == "ShaderCache"))
-                {
-                    Console.WriteLine("Saving PCC (this may take a while...)");
-                    pcc.saveToFile(destinationFile, false);
-                }
-                else
-                {
-                    Console.WriteLine("Reconstructing PCC...)");
-                    pcc.saveByReconstructing(destinationFile);
-                }
+                Console.WriteLine("Saving pcc...");
+                pcc.save(destinationFile);
                 return VerifyPCC(destinationFile);
-
             }
             else
             {
@@ -208,18 +199,69 @@ namespace TransplanterLib
             }
         }
 
-        public static Boolean doesPCCContainGUIs(string pccfilepath)
+        /// <summary>
+        /// Scans the PCC for GFxMovieInfo exports. If anygui is true, it will return true for any. If false, it will only match on a whitelist of values.
+        /// </summary>
+        /// <param name="pccfilepath"></param>
+        /// <param name="anygui"></param>
+        /// <returns></returns>
+        public static Boolean doesPCCContainGUIs(string pccfilepath, Boolean anygui)
         {
+            string[] whitelist = {
+                "GUI_SF_AreaMap.ME2_AreaMap",
+                "GUI_SF_BlackScreen.BlackScreen",
+                "GUI_SF_ConversationWheel.ConversationWheel",
+                "GUI_SF_DLC_Docks.DLC_Docks",
+                "GUI_SF_Elevators.NormandyElevator",
+                "GUI_SF_GalaxyAtWar.galaxyAtWar",
+                "GUI_SF_GalaxyMap.GalaxyMap",
+                "GUI_SF_GameOver.GameOver",
+                "GUI_SF_Jourdex.Jourdex",
+                "GUI_SF_LoadSave.LoadSave",
+                "GUI_SF_LoadScreenToolTips.LoadScreenToolTips",
+                "GUI_SF_Mail.Mail",
+                "GUI_SF_MainWheel.MainWheel",
+                "GUI_SF_Markers.Markers",
+                "GUI_SF_Markers.ObjectiveMarkers",
+                "GUI_SF_ME2_AreaMap.ME2_AreaMap",
+                "GUI_SF_ME2_HUD.ME2_HUD",
+                "GUI_SF_ME2_PowerWheel.ME2_PowerWheel",
+                "GUI_SF_ME2_Reticle.ME2_Reticle",
+                "GUI_SF_MessageBox.messageBox",
+                "GUI_SF_MessageBox_Hint.MessageBox_Hint",
+                "GUI_SF_MPPlayerCountdown.MPPlayerCountdown",
+                "GUI_SF_Options.Options",
+                "GUI_SF_PC_SharedAssets.PC_SharedAssets",
+                "GUI_SF_Personalization.Personalization",
+                "GUI_SF_PersonalTerminal.PersonalTerminal",
+                "GUI_SF_PersonalTerminalApt.PersonalTerminalApt",
+                "GUI_SF_PRCStore.PRCStore",
+                "GUI_SF_SaveLoadIndicator.SaveLoadIndicator",
+                "GUI_SF_SquadRecord.SquadRecord",
+                "GUI_SF_Store_NoPurchase.Store_NoPurchase",
+                "GUI_SF_Subtitles.Subtitles",
+                "GUI_SF_Training.Training",
+                "GUI_SF_WarAssets.WarAssets",
+                "GUI_SF_Xbox_ControllerIcons.Xbox_ControllerIcons"
+            };
             PCCObject pcc = new PCCObject(pccfilepath);
             foreach (PCCObject.ExportEntry export in pcc.Exports)
             {
                 if (export.ClassName == "GFxMovieInfo")
                 {
-                    string packobjname = export.PackageFullName + "." + export.ObjectName;
-                    //check if problem UI.
-
+                    if (anygui)
+                    {
+                        Console.WriteLine("PCC contains at least one GUI export");
+                        return true;
+                    }
+                    string fullname = export.PackageName + "." + export.ObjectName;
+                    if (Array.Exists(whitelist, element => element == fullname)) {
+                        Console.WriteLine("PCC contains a whitelisted GUI export.");
+                        return true;
+                    }
                 }
             }
+            Console.WriteLine("PCC does not contain any GUI exports");
             return false;
         }
 
@@ -278,16 +320,8 @@ namespace TransplanterLib
                 if (replaced)
                 {
                     //pcc.saveByReconstructing(destinationFile); //34 is default
-                    if (pcc.Exports.Exists(x => x.ObjectName == "SeekFreeShaderCache" && x.ClassName == "ShaderCache"))
-                    {
-                        Console.WriteLine("Saving PCC (this may take a while...)");
-                        pcc.saveToFile(destinationFile, false);
-                    }
-                    else
-                    {
-                        Console.WriteLine("Reconstructing PCC (this may take a while...)");
-                        pcc.saveByReconstructing(destinationFile);
-                    }
+                    Console.WriteLine("Saving pcc...");
+                    pcc.save(destinationFile);
                     return VerifyPCC(destinationFile);
                 }
                 else

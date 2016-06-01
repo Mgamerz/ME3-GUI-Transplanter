@@ -60,6 +60,7 @@
     <Compile Include="Bytecode.cs" />
     <Compile Include="Function.cs" />
     <Compile Include="PCCHandler.cs" />
+    <None Include="PCCObjectOLD.csx" />
     <Compile Include="PCCObject.cs" />
     <Compile Include="PropertyReader.cs" />
     <Compile Include="SFXEnum.cs" />

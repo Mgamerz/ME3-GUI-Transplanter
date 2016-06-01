@@ -50,6 +50,8 @@ namespace Transplanter_CLI
         [Option('r', "verifypccintegrity", DefaultValue = false, MutuallyExclusiveSet = "operation", HelpText = "Loads a PCC to verify it is valid (or at least loadable). Returns 1 if not, 0 if OK.")]
         public bool VerifyPCC { get; set; }
 
+        [Option('u', "guiscan", DefaultValue = false, MutuallyExclusiveSet = "operation", HelpText = "Loads a PCC to check if it contains any GUIS. Returns 0 if none are found, 1 if any are.")]
+        public bool GUIScan { get; set; }
 
         //Extract Options
         [Option('n', "names", DefaultValue = false, HelpText = "Dumps the name table for the PCC.")]
@@ -172,6 +174,18 @@ namespace Transplanter_CLI
                     {
                         Console.Error.WriteLine("Can only verify single pcc integrity, --inputfile is the only allowed input for this operation.");
                         endProgram(CODE_INPUT_FILE_NOT_FOUND);
+                    }
+                } else if (options.GUIScan)
+                {
+                    if (options.InputFile != null)
+                    {
+                        Console.WriteLine("Scanning for whitelisted GFxMovieInfo exports on " + options.InputFile);
+                        endProgram(doesPCCContainGUIs(options.InputFile, false) ? 1 : 0);
+                    }
+                    else
+                    {
+                        Console.Error.WriteLine("Can only scan 1 pcc at a time, --inputfile is the only allowed input for this operation.");
+                        endProgram(2);
                     }
                 }
                 else if (options.Inject)
