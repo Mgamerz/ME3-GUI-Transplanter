@@ -553,9 +553,9 @@ namespace TransplanterLib
             switch (pcc.Names[type])
             {
                 case "IntProperty":
-                case "FloatProperty":
                 case "ObjectProperty":
                 case "StringRefProperty":
+                case "FloatProperty":
                     v.IntValue = BitConverter.ToInt32(raw, start);
                     v.len = 4;
                     break;

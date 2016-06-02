@@ -4,6 +4,7 @@ using System.Text;
 using System.Diagnostics;
 using System.IO;
 using System.ComponentModel;
+using static TransplanterLib.PropertyReader;
 
 namespace TransplanterLib
 {
@@ -255,7 +256,8 @@ namespace TransplanterLib
                         return true;
                     }
                     string fullname = export.PackageName + "." + export.ObjectName;
-                    if (Array.Exists(whitelist, element => element == fullname)) {
+                    if (Array.Exists(whitelist, element => element == fullname))
+                    {
                         Console.WriteLine("PCC contains a whitelisted GUI export.");
                         return true;
                     }
@@ -906,6 +908,140 @@ namespace TransplanterLib
             }
 
             return path;
+        }
+
+        public static void dumpDynamicMixInsFromPCC(string path)
+        {
+            PCCObject pcc = new PCCObject(path);
+            try
+            {
+                string savepath = Path.GetFileNameWithoutExtension(path) + ".sql";
+                using (StreamWriter stringoutput = new StreamWriter(savepath))
+                {
+                    int numDone = 1;
+                    int numTotal = pcc.Exports.Count;
+                    int lastProgress = 0;
+                    writeVerboseLine("Enumerating exports");
+                    Boolean needsFlush = false;
+                    int index = 0;
+                    foreach (PCCObject.ExportEntry exp in pcc.Exports)
+                    {
+                        index++;
+                        //filter
+                        switch (exp.ObjectName ) {
+                            case "AnimNodeSequence":
+                            case "BioAnimNodeSequenceMirror":
+                                continue;
+                        }
+
+                        if (exp.PackageFullName.StartsWith("EffectsMaterials"))
+                        {
+                            continue;
+                        }
+
+                        if (exp.PackageFullName.ToUpper().StartsWith("BIOG"))
+                        {
+                            continue;
+                        }
+
+                        if (exp.PackageFullName.ToUpper().StartsWith("BIOVFX"))
+                        {
+                            continue;
+                        }
+
+                        if (exp.PackageFullName.ToUpper().StartsWith("WWISE"))
+                        {
+                            continue;
+                        }
+
+                        //Boolean isCoalesced = coalesced && exp.likelyCoalescedVal;
+                        Boolean isCoalesced = true;
+                        Boolean isScript = exp.ClassName == "Function";
+                        //Boolean isEnum = exp.ClassName == "Enum";
+                        //int progress = ((int)(((double)numDone / numTotal) * 100));
+                        //while (progress >= (lastProgress + 10))
+                        //{
+                        //    Console.Write("..." + (lastProgress + 10) + "%");
+                        //    needsFlush = true;
+                        //    lastProgress += 10;
+                        //}
+                        //if (exports || data || isScript || isCoalesced)
+                        //{
+                        //    if (separateExports)
+                        //    {
+                        //        stringoutput.WriteLine("=======================================================================");
+                        //    }
+                        //    stringoutput.Write("#" + index + " ");
+                        //    if (isCoalesced)
+                        //    {
+                        //        stringoutput.Write("[C] ");
+                        //    }
+
+                        //    if (exports || isCoalesced || isScript)
+                        //    {
+                        //        stringoutput.WriteLine(exp.PackageFullName + "." + exp.ObjectName + "(" + exp.ClassName + ") (Superclass: " + exp.ClassParentWrapped + ") (Data Offset: 0x " + exp.DataOffset.ToString("X4") + ")");
+                        //    }
+
+                        //    if (isEnum)
+                        //    {
+                        //        SFXEnum sfxenum = new SFXEnum(pcc, exp.Data);
+                        //        stringoutput.WriteLine(sfxenum.ToString());
+                        //    }
+
+                        //    if (isScript)
+                        //    {
+                        //        stringoutput.WriteLine("==============Function==============");
+                        //        Function func = new Function(exp.Data, pcc);
+                        //        stringoutput.WriteLine(func.ToRawText());
+                        //    }
+                        //    if (properties)
+                        //    {
+                        List<PropertyReader.Property> p;
+
+                        byte[] buff = exp.Data;
+                        p = PropertyReader.getPropList(pcc, buff);
+                        if (p.Count > 0)
+                        {
+                            Boolean isfirst = true;
+                            foreach (Property pr in p)
+                            {
+                                if (pr.TypeVal == PropertyReader.PropertyType.FloatProperty)
+                                {
+                                    if (isfirst)
+                                    {
+                                        stringoutput.WriteLine(" -- EXPORT #" + index + " " + exp.PackageFullName + "." + exp.ObjectName);
+                                        isfirst = false;
+                                    }
+                                    Console.WriteLine("PROPERTY: " + pcc.getNameEntry(pr.Name)+" at 0x"+(pr.offsetval + exp.DataOffset).ToString("X8"));
+                                    byte[] ibuff = BitConverter.GetBytes(pr.Value.IntValue);
+                                    float f = BitConverter.ToSingle(ibuff, 0);
+                                    stringoutput.WriteLine("INSERT INTO dynamicmixinlibrary VALUES(null,'CATNAME - " + pcc.getNameEntry(pr.Name) + "'," +
+                                        "'PLACEHOLDERDESC', 'HINT', 'TARGETMODULE', 'TARGETPATH', " + new FileInfo(pcc.pccFileName).Length.ToString() + "," +
+                                        "0x" + (pr.offsetval + exp.DataOffset).ToString("X8") + ",3,null,null,null," + f.ToString() + ",null,null,null,null,null,null,0.001,null,CATEGORY, 0);");
+                                }
+                            }
+                        }
+                        //    }
+                        //    if (data)
+                        //    {
+                        //        stringoutput.WriteLine("==============Data==============");
+                        //        stringoutput.WriteLine(BitConverter.ToString(exp.Data));
+                        //    }
+                        //}
+                        //numDone++;
+                    }
+                    //stringoutput.WriteLine("--End of " + datasets);
+
+                    if (needsFlush)
+                    {
+                        Console.WriteLine();
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine("Exception parsing " + path + "\n" + e.Message);
+            }
         }
     }
 }

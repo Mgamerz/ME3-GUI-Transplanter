@@ -53,6 +53,9 @@ namespace Transplanter_CLI
         [Option('u', "guiscan", DefaultValue = false, MutuallyExclusiveSet = "operation", HelpText = "Loads a PCC to check if it contains any GUIS. Returns 0 if none are found, 1 if any are.")]
         public bool GUIScan { get; set; }
 
+        [Option('f', "dumpmixinsql", DefaultValue = false, MutuallyExclusiveSet = "operation", HelpText = "Dumps Dynamic MixIn SQL statements for a PCCs properties")]
+        public bool DMSQL { get; set; }
+
         //Extract Options
         [Option('n', "names", DefaultValue = false, HelpText = "Dumps the name table for the PCC.")]
         public bool Names { get; set; }
@@ -181,6 +184,20 @@ namespace Transplanter_CLI
                     {
                         Console.WriteLine("Scanning for whitelisted GFxMovieInfo exports on " + options.InputFile);
                         endProgram(doesPCCContainGUIs(options.InputFile, false) ? 1 : 0);
+                    }
+                    else
+                    {
+                        Console.Error.WriteLine("Can only scan 1 pcc at a time, --inputfile is the only allowed input for this operation.");
+                        endProgram(2);
+                    }
+                } else if (options.DMSQL)
+                {
+                    if (options.InputFile != null)
+                    {
+                        Console.WriteLine("Dumping SQL from " + options.InputFile);
+                        dumpDynamicMixInsFromPCC(options.InputFile);
+                        Console.WriteLine("done");
+                        endProgram(0);
                     }
                     else
                     {
