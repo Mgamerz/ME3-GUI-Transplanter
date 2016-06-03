@@ -954,48 +954,11 @@ namespace TransplanterLib
                             continue;
                         }
 
-                        //Boolean isCoalesced = coalesced && exp.likelyCoalescedVal;
-                        Boolean isCoalesced = true;
-                        Boolean isScript = exp.ClassName == "Function";
-                        //Boolean isEnum = exp.ClassName == "Enum";
-                        //int progress = ((int)(((double)numDone / numTotal) * 100));
-                        //while (progress >= (lastProgress + 10))
-                        //{
-                        //    Console.Write("..." + (lastProgress + 10) + "%");
-                        //    needsFlush = true;
-                        //    lastProgress += 10;
-                        //}
-                        //if (exports || data || isScript || isCoalesced)
-                        //{
-                        //    if (separateExports)
-                        //    {
-                        //        stringoutput.WriteLine("=======================================================================");
-                        //    }
-                        //    stringoutput.Write("#" + index + " ");
-                        //    if (isCoalesced)
-                        //    {
-                        //        stringoutput.Write("[C] ");
-                        //    }
-
-                        //    if (exports || isCoalesced || isScript)
-                        //    {
-                        //        stringoutput.WriteLine(exp.PackageFullName + "." + exp.ObjectName + "(" + exp.ClassName + ") (Superclass: " + exp.ClassParentWrapped + ") (Data Offset: 0x " + exp.DataOffset.ToString("X4") + ")");
-                        //    }
-
-                        //    if (isEnum)
-                        //    {
-                        //        SFXEnum sfxenum = new SFXEnum(pcc, exp.Data);
-                        //        stringoutput.WriteLine(sfxenum.ToString());
-                        //    }
-
-                        //    if (isScript)
-                        //    {
-                        //        stringoutput.WriteLine("==============Function==============");
-                        //        Function func = new Function(exp.Data, pcc);
-                        //        stringoutput.WriteLine(func.ToRawText());
-                        //    }
-                        //    if (properties)
-                        //    {
+                        if (exp.PackageFullName.ToUpper().StartsWith("GUI_SF"))
+                        {
+                            continue;
+                        }
+                        
                         List<PropertyReader.Property> p;
 
                         byte[] buff = exp.Data;
@@ -1012,12 +975,24 @@ namespace TransplanterLib
                                         stringoutput.WriteLine(" -- EXPORT #" + index + " " + exp.PackageFullName + "." + exp.ObjectName);
                                         isfirst = false;
                                     }
-                                    Console.WriteLine("PROPERTY: " + pcc.getNameEntry(pr.Name)+" at 0x"+(pr.offsetval + exp.DataOffset).ToString("X8"));
+                                    Console.WriteLine("FLOAT PROPERTY: " + pcc.getNameEntry(pr.Name)+" at 0x"+(pr.offsetval + exp.DataOffset).ToString("X8"));
                                     byte[] ibuff = BitConverter.GetBytes(pr.Value.IntValue);
                                     float f = BitConverter.ToSingle(ibuff, 0);
                                     stringoutput.WriteLine("INSERT INTO dynamicmixinlibrary VALUES(null,'CATNAME - " + pcc.getNameEntry(pr.Name) + "'," +
                                         "'PLACEHOLDERDESC', 'HINT', 'TARGETMODULE', 'TARGETPATH', " + new FileInfo(pcc.pccFileName).Length.ToString() + "," +
                                         "0x" + (pr.offsetval + exp.DataOffset).ToString("X8") + ",3,null,null,null," + f.ToString() + ",null,null,null,null,null,null,0.001,null,CATEGORY, 0);");
+                                }
+                                if (pr.TypeVal == PropertyReader.PropertyType.IntProperty)
+                                {
+                                    if (isfirst)
+                                    {
+                                        stringoutput.WriteLine(" -- EXPORT #" + index + " " + exp.PackageFullName + "." + exp.ObjectName);
+                                        isfirst = false;
+                                    }
+                                    Console.WriteLine("INT PROPERTY: " + pcc.getNameEntry(pr.Name) + " at 0x" + (pr.offsetval + exp.DataOffset).ToString("X8"));
+                                    stringoutput.WriteLine("INSERT INTO dynamicmixinlibrary VALUES(null,'CATNAME - " + pcc.getNameEntry(pr.Name) + "'," +
+                                        "'PLACEHOLDERDESC', 'HINT', 'TARGETMODULE', 'TARGETPATH', " + new FileInfo(pcc.pccFileName).Length.ToString() + "," +
+                                        "0x" + (pr.offsetval + exp.DataOffset).ToString("X8") + ",0," + pr.Value.IntValue.ToString() + ",null,null,null,0,null,null,null,null,null,0,null,CATEGORY, 0);");
                                 }
                             }
                         }
