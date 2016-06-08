@@ -46,8 +46,13 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\libs\ICSharpCode.SharpZipLib.dll</HintPath>
     </Reference>
+    <Reference Include="Newtonsoft.Json, Version=8.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <HintPath>..\packages\Newtonsoft.Json.8.0.3\lib\net45\Newtonsoft.Json.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
+    <Reference Include="System.Drawing" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="Microsoft.CSharp" />
@@ -59,10 +64,21 @@
     <Compile Include="BitConverter.cs" />
     <Compile Include="Bytecode.cs" />
     <Compile Include="Function.cs" />
+    <Compile Include="Interpreter.cs" />
     <Compile Include="PCCHandler.cs" />
+    <Compile Include="TalkFile.cs" />
+    <Compile Include="TalkFiles.cs" />
+    <Compile Include="TreeNode.cs" />
+    <Compile Include="TreeNodeList.cs" />
+    <Compile Include="UnrealObjectInfo.cs" />
+    <None Include="ME3ObjectInfo.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
     <None Include="PCCObjectOLD.csx" />
     <Compile Include="PCCObject.cs" />
+    <None Include="PropertyReaderOld.csx" />
     <Compile Include="PropertyReader.cs" />
+    <Compile Include="PropGrid.cs" />
     <Compile Include="SFXEnum.cs" />
     <Compile Include="TransplanterLib.cs" />
     <Compile Include="..\SharedAssemblyInfo.cs" />

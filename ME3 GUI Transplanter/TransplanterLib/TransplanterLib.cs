@@ -11,6 +11,38 @@ namespace TransplanterLib
     public static class TransplanterLib
     {
         private static Boolean verbose;
+        private static string _gamepath = null;
+        public static string GamePath
+        {
+            get
+            {
+                if (_gamepath == null)
+                {
+                    //lookup reg key
+                    string hkey32 = @"HKEY_LOCAL_MACHINE\SOFTWARE\";
+                    string hkey64 = @"HKEY_LOCAL_MACHINE\SOFTWARE\Wow6432Node\";
+                    string subkey = @"BioWare\Mass Effect 3";
+                    string keyName;
+
+                    keyName = hkey32 + subkey;
+                    string test = (string)Microsoft.Win32.Registry.GetValue(keyName, "Install Dir", null);
+                    if (test != null)
+                    {
+                        _gamepath = test;
+                        return _gamepath;
+                    }
+
+                    keyName = hkey64 + subkey;
+                    _gamepath = (string)Microsoft.Win32.Registry.GetValue(keyName, "Install Dir", null);
+                }
+                return _gamepath;
+            }
+            set
+            {
+                _gamepath = value;
+            }
+        }
+
         public static Boolean Verbose
         {
             set
@@ -671,7 +703,12 @@ namespace TransplanterLib
         /// <param name="outputfolder"></param>
         public static void dumpPCCFile(string file, Boolean[] args, string outputfolder = null)
         {
-            try
+            if (GamePath == null)
+            {
+                Console.Error.WriteLine("Game path not defined. Can't dump file file with undefined game path.");
+                return;
+            }
+            //try
             {
                 Boolean imports = args[0];
                 Boolean exports = args[1];
@@ -693,6 +730,11 @@ namespace TransplanterLib
                 if (!outfolder.EndsWith(@"\"))
                 {
                     outfolder += @"\";
+                }
+
+                if (properties)
+                {
+                    UnrealObjectInfo.loadfromJSON();
                 }
 
                 string savepath = outfolder + Path.GetFileNameWithoutExtension(file) + ".txt";
@@ -797,18 +839,18 @@ namespace TransplanterLib
                                 }
                                 if (properties)
                                 {
-                                    List<PropertyReader.Property> p;
+                                    Interpreter i = new Interpreter();
+                                    i.Pcc = pcc;
+                                    i.Index = index - 1; //0-based array
+                                    i.InitInterpreter();
+                                    TreeNode top = i.topNode;
 
-                                    byte[] buff = exp.Data;
-                                    p = PropertyReader.getPropList(pcc, buff);
-                                    if (p.Count > 0)
+                                    if (top.Children.Count > 0 && top.Children[0].Tag != Interpreter.nodeType.None)
                                     {
                                         stringoutput.WriteLine("=================================================Properties=================================================");
-                                        stringoutput.WriteLine(String.Format("|{0,40}|{1,15}|{2,10}|{3,30}|", "Name", "Type", "Size", "Value"));
-                                        for (int l = 0; l < p.Count; l++)
-                                            stringoutput.WriteLine(PropertyReader.PropertyToText(p[l], pcc));
-                                        stringoutput.WriteLine("==================================================================================================");
-
+                                        //stringoutput.WriteLine(String.Format("|{0,40}|{1,15}|{2,10}|{3,30}|", "Name", "Type", "Size", "Value"));
+                                        top.PrintPretty("", stringoutput, false);
+                                        stringoutput.WriteLine();
                                     }
                                 }
                                 if (data)
@@ -840,10 +882,10 @@ namespace TransplanterLib
                     }
                 }
             }
-            catch (Exception e)
-            {
-                Console.WriteLine("Exception parsing " + file + "\n" + e.Message);
-            }
+            //catch (Exception e)
+            //{
+            //    Console.WriteLine("Exception parsing " + file + "\n" + e.Message);
+            //}
         }
 
         /// <summary>
@@ -928,7 +970,8 @@ namespace TransplanterLib
                     {
                         index++;
                         //filter
-                        switch (exp.ObjectName ) {
+                        switch (exp.ObjectName)
+                        {
                             case "AnimNodeSequence":
                             case "BioAnimNodeSequenceMirror":
                                 continue;
@@ -958,31 +1001,30 @@ namespace TransplanterLib
                         {
                             continue;
                         }
-                        
+
                         List<PropertyReader.Property> p;
 
-                        byte[] buff = exp.Data;
-                        p = PropertyReader.getPropList(pcc, buff);
+                        p = PropertyReader.getPropList(pcc, exp);
                         if (p.Count > 0)
                         {
                             Boolean isfirst = true;
                             foreach (Property pr in p)
                             {
-                                if (pr.TypeVal == PropertyReader.PropertyType.FloatProperty)
+                                if (pr.TypeVal == PropertyReader.Type.FloatProperty)
                                 {
                                     if (isfirst)
                                     {
                                         stringoutput.WriteLine(" -- EXPORT #" + index + " " + exp.PackageFullName + "." + exp.ObjectName);
                                         isfirst = false;
                                     }
-                                    Console.WriteLine("FLOAT PROPERTY: " + pcc.getNameEntry(pr.Name)+" at 0x"+(pr.offsetval + exp.DataOffset).ToString("X8"));
+                                    Console.WriteLine("FLOAT PROPERTY: " + pcc.getNameEntry(pr.Name) + " at 0x" + (pr.offsetval + exp.DataOffset).ToString("X8"));
                                     byte[] ibuff = BitConverter.GetBytes(pr.Value.IntValue);
                                     float f = BitConverter.ToSingle(ibuff, 0);
                                     stringoutput.WriteLine("INSERT INTO dynamicmixinlibrary VALUES(null,'CATNAME - " + pcc.getNameEntry(pr.Name) + "'," +
                                         "'PLACEHOLDERDESC', 'HINT', 'TARGETMODULE', 'TARGETPATH', " + new FileInfo(pcc.pccFileName).Length.ToString() + "," +
                                         "0x" + (pr.offsetval + exp.DataOffset).ToString("X8") + ",3,null,null,null," + f.ToString() + ",null,null,null,null,null,null,0.001,null,CATEGORY, 0);");
                                 }
-                                if (pr.TypeVal == PropertyReader.PropertyType.IntProperty)
+                                if (pr.TypeVal == PropertyReader.Type.IntProperty)
                                 {
                                     if (isfirst)
                                     {

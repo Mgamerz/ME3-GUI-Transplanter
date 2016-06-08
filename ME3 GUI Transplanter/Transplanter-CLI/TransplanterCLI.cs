@@ -28,9 +28,11 @@ namespace Transplanter_CLI
             HelpText = "File to be operated on.")]
         public string TargetFile { get; set; }
 
+
+
         //Operations
         [Option('p', "transplant", MutuallyExclusiveSet = "operation",
-            HelpText = "Indicates that a transplant operation is going to take place. Requires --targetfile.")]
+                HelpText = "Indicates that a transplant operation is going to take place. Requires --targetfile.")]
         public bool Transplant { get; set; }
 
         [Option('g', "gui-extract", MutuallyExclusiveSet = "operation",
@@ -53,7 +55,7 @@ namespace Transplanter_CLI
         [Option('u', "guiscan", DefaultValue = false, MutuallyExclusiveSet = "operation", HelpText = "Loads a PCC to check if it contains any GUIS. Returns 0 if none are found, 1 if any are.")]
         public bool GUIScan { get; set; }
 
-        [Option('f', "dumpmixinsql", DefaultValue = false, MutuallyExclusiveSet = "operation", HelpText = "Dumps Dynamic MixIn SQL statements for a PCCs properties")]
+        [Option('b', "dumpmixinsql", DefaultValue = false, MutuallyExclusiveSet = "operation", HelpText = "Dumps Dynamic MixIn SQL statements for a PCCs properties")]
         public bool DMSQL { get; set; }
 
         //Extract Options
@@ -89,6 +91,10 @@ namespace Transplanter_CLI
         [Option('v', "verbose", DefaultValue = false,
           HelpText = "Prints debugging information to the console")]
         public bool Verbose { get; set; }
+
+        [Option('a', "gamedir",
+            HelpText = "Specify a specific game directory. Overrides automatic registry key lookups.")]
+        public string GameDir { get; set; }
 
         [ParserState]
         public IParserState LastParserState { get; set; }
@@ -133,9 +139,27 @@ namespace Transplanter_CLI
                     writeVerboseLine("Verbose logging is enabled");
                 }
 
+                if (options.GameDir != null)
+                {
+                    if (Directory.Exists(options.GameDir))
+                    {
+                        GamePath = options.GameDir;
+                        if (!GamePath.EndsWith("\\"))
+                        {
+                            GamePath += "\\";
+                        }
+                        Console.WriteLine("game path set to " + GamePath);
+                    }
+                    else
+                    {
+                        Console.Error.WriteLine("Specified game dir doesn't exist: " + options.GameDir);
+                        endProgram(CODE_INPUT_FOLDER_NOT_FOUND);
+                    }
+                }
+
                 if (options.InputFile == null && options.InputFolder == null)
                 {
-                    Console.Error.WriteLine("--inputfile or --inputfolder argument is required for all operations.");
+                    Console.Error.WriteLine("--inputfile or --inputfolder argument is required for all operations. TEST");
                     Console.Error.WriteLine(options.GetUsage());
                     endProgram(CODE_NO_INPUT);
                 }
@@ -145,7 +169,6 @@ namespace Transplanter_CLI
                     Console.Error.WriteLine("Input file does not exist: " + options.InputFile);
                     endProgram(CODE_INPUT_FILE_NOT_FOUND);
                 }
-
                 if (options.InputFolder != null && !options.InputFolder.EndsWith(@"\"))
                 {
                     options.InputFolder = options.InputFolder + @"\";
@@ -173,12 +196,14 @@ namespace Transplanter_CLI
                     {
                         Console.WriteLine("Checking PCC can load " + options.TargetFile);
                         int result = VerifyPCC(options.InputFile);
-                    } else
+                    }
+                    else
                     {
                         Console.Error.WriteLine("Can only verify single pcc integrity, --inputfile is the only allowed input for this operation.");
                         endProgram(CODE_INPUT_FILE_NOT_FOUND);
                     }
-                } else if (options.GUIScan)
+                }
+                else if (options.GUIScan)
                 {
                     if (options.InputFile != null)
                     {
@@ -190,7 +215,8 @@ namespace Transplanter_CLI
                         Console.Error.WriteLine("Can only scan 1 pcc at a time, --inputfile is the only allowed input for this operation.");
                         endProgram(2);
                     }
-                } else if (options.DMSQL)
+                }
+                else if (options.DMSQL)
                 {
                     if (options.InputFile != null)
                     {
