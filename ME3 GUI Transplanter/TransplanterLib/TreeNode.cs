@@ -82,7 +82,7 @@ namespace TransplanterLib
 
         public void PrintPretty(string indent, StreamWriter str, bool last)
         {
-            
+
             str.Write(indent);
             if (last)
             {
@@ -94,10 +94,16 @@ namespace TransplanterLib
                 str.Write("├─");
                 indent += "| ";
             }
-            str.Write( Text);
+            str.Write(Text);
             if (Children.Count > 1000 && Tag == Interpreter.nodeType.ArrayProperty)
             {
-                str.Write(" > 1000, ("+Children.Count+") suppressed.");
+                str.Write(" > 1000, (" + Children.Count + ") suppressed.");
+                return;
+            }
+
+            if (Tag == Interpreter.nodeType.ArrayProperty && (Text.Contains("LookupTable") || Text.Contains("CompressedTrackOffsets")))
+            {
+                str.Write(" - suppressed by data dumper.");
                 return;
             }
             for (int i = 0; i < Children.Count; i++)
@@ -107,12 +113,45 @@ namespace TransplanterLib
                     continue;
                 }
                 str.Write("\n");
-                Children[i].PrintPretty(indent, str, i == Children.Count - 1 || (i == Children.Count -2 && Children[Children.Count - 1].Tag == Interpreter.nodeType.None));
+                Children[i].PrintPretty(indent, str, i == Children.Count - 1 || (i == Children.Count - 2 && Children[Children.Count - 1].Tag == Interpreter.nodeType.None));
             }
             return;
         }
 
-        
+        internal void PrintMeshViewer(string indent, StreamWriter str, bool value)
+        {
+            Console.WriteLine(Text);
+            foreach (TreeNode Child in Children)
+            {
+                Child.PrintMeshViewer("", str, true);
+            }
+            //if (Text.Contains("location"))
+            //{
+            //    str.Write("(");
+
+            //    foreach (TreeNode child in Children)
+            //    {
+            //        Console.Write(child.Text);
+
+            //        str.WriteLine(child.Text + " ");
+
+            //    }
+            //    str.WriteLine(")");
+            //}
+            //else
+            //{
+            //    foreach (TreeNode child in Children)
+            //    {
+            //        if (child.Text.Contains("location"))
+            //        {
+            //            Console.Write(child.Text);
+            //            child.PrintMeshViewer("", str, true);
+            //        }
+            //    }
+            //}
+        }
+
+
 
         //public void Traverse(Action action)
         //{
@@ -127,5 +166,5 @@ namespace TransplanterLib
         //}
     }
 
-    
+
 }

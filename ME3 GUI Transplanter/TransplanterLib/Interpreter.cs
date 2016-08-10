@@ -110,10 +110,6 @@ namespace TransplanterLib
 
         private void StartScan(IEnumerable<string> expandedNodes = null, string topNodeName = null, string selectedNodeName = null)
         {
-            if (Path.GetFileName(pcc.pccFileName) == "Patch_SFXGrenadeContainer.pcc")
-            {
-                Console.WriteLine("REAB");
-            }
             readerpos = PropertyReader.detectStart(pcc, memory, pcc.Exports[Index].ObjectFlags);
             BitConverter.IsLittleEndian = true;
             List<PropHeader> topLevelHeaders = ReadHeadersTillNone();
@@ -153,10 +149,6 @@ namespace TransplanterLib
                         UnrealObjectInfo.ArrayType arrayType;
                         try
                         {
-                            if (arrayLength == 47 )
-                            {
-                                Console.WriteLine("break");
-                            }
                             arrayType = UnrealObjectInfo.getArrayType(className, pcc.getNameEntry(header.name));
                         }
                         catch (Exception)

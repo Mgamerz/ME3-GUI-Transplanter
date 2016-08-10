@@ -58,6 +58,13 @@ namespace Transplanter_CLI
         [Option('b', "dumpmixinsql", DefaultValue = false, MutuallyExclusiveSet = "operation", HelpText = "Dumps Dynamic MixIn SQL statements for a PCCs properties")]
         public bool DMSQL { get; set; }
 
+        [Option('w', "dumpweaponsql", DefaultValue = false, MutuallyExclusiveSet = "operation", HelpText = "Dumps Dynamic MixIn Balance Changed Weapon SQL statements")]
+        public bool DWSQL { get; set; }
+
+
+        [Option('h', "dumppathfindingfile", DefaultValue = false, MutuallyExclusiveSet = "operation", HelpText = "Dumps pathfinding nodes to file readable by MeshViewer")]
+        public bool PathFindingDump { get; set; }
+
         //Extract Options
         [Option('n', "names", DefaultValue = false, HelpText = "Dumps the name table for the PCC.")]
         public bool Names { get; set; }
@@ -86,6 +93,8 @@ namespace Transplanter_CLI
         //inject options
         [Option('z', "target-export", HelpText = "Specifies the target export to search for to inject the SWF file in with the --injectswf switch. Only works with the --inputfile switch, not --inputfolder.")]
         public string TargetExport { get; set; }
+
+
 
         //Options
         [Option('v', "verbose", DefaultValue = false,
@@ -202,6 +211,14 @@ namespace Transplanter_CLI
                         Console.Error.WriteLine("Can only verify single pcc integrity, --inputfile is the only allowed input for this operation.");
                         endProgram(CODE_INPUT_FILE_NOT_FOUND);
                     }
+                } else if (options.PathFindingDump)
+                {
+                    if (options.InputFile != null)
+                    {
+                        Console.WriteLine("Dumping Pathfinding on file " + options.TargetFile);
+                        DumpMeshViewerFile(options.InputFile);
+                        endProgram(0);
+                    }
                 }
                 else if (options.GUIScan)
                 {
@@ -222,6 +239,21 @@ namespace Transplanter_CLI
                     {
                         Console.WriteLine("Dumping SQL from " + options.InputFile);
                         dumpDynamicMixInsFromPCC(options.InputFile);
+                        Console.WriteLine("done");
+                        endProgram(0);
+                    }
+                    else
+                    {
+                        Console.Error.WriteLine("Can only scan 1 pcc at a time, --inputfile is the only allowed input for this operation.");
+                        endProgram(2);
+                    }
+                }
+                else if (options.DWSQL)
+                {
+                    if (options.InputFolder != null)
+                    {
+                        Console.WriteLine("Dumping Weapon SQL from " + options.InputFolder);
+                        dumpModMakerWeaponDynamicSQL(options.InputFolder);
                         Console.WriteLine("done");
                         endProgram(0);
                     }

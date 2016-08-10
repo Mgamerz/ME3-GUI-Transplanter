@@ -293,7 +293,7 @@ namespace TransplanterLib
             {
                 get
                 {
-                    return (Data.Length < 25) ? false : (Data[25] == 64); //0x40
+                    return (Data.Length < 25) ? false : ((Data[25] & 0x40) == 64); //0x40
                 }
                 set { }
             }
@@ -341,6 +341,7 @@ namespace TransplanterLib
         {
             Loaded = true;
             pccFileName = Path.GetFullPath(pccFilePath);
+            Debug.WriteLine("Loading pcc " + pccFileName);
             using (FileStream pccStream = File.OpenRead(pccFileName))
             {
                 Names = new List<string>();
@@ -369,6 +370,7 @@ namespace TransplanterLib
 
                 if (bCompressed)
                 {
+                    Debug.WriteLine("COMPRESSED...");
                     // seeks the blocks info position
                     pccStream.Seek(idxOffsets + 60, SeekOrigin.Begin);
                     int generator = pccStream.ReadValueS32();
@@ -485,7 +487,7 @@ namespace TransplanterLib
                     Exports.Add(e);
                 }
             }
-            Debug.WriteLine(getMetadataString());
+            //Debug.WriteLine(getMetadataString());
         }
 
         public PCCObject()
