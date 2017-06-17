@@ -36,10 +36,10 @@ Optional:
 * **-o/--outputfolder** Redirects output files into the specified folder. If it does not exist, it will be created.
 
 
-####Issues
+#### Issues
 You can raise issues for this project on this github page or on [my modding forum](http://me3tweaks.com/forums).
 
-####License
+#### License
 Uses some PCC related code from the open source [ME3Explorer Project](http://github.com/me3explorer/me3explorer).
 
 This program is licensed under GPL. All derivatives of this work must include their source code when distributed.
