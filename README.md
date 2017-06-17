@@ -5,12 +5,12 @@ Transplants GFX files from one PCC to another in ME3, as well as dumping useful 
 
 ---
 
-###Graphical User Interface
+### Graphical User Interface
 Can transplant files one pcc to another. Made to be simple to use with only a single task.
 
 ![GUI Image](https://github.com/Mgamerz/ME3-GUI-Transplanter/raw/static/gui-1.png)
 
-###Command Line Interface
+### Command Line Interface
 Can transplant single file or batch by doing a folder. Contains multiple switches for extended operations such as exporting various types of PCC data into a useful text format, GUI file extraction, and Exec function dumping.
 
 Command line arguments are partially shared.
