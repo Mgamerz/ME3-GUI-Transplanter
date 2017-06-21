@@ -5,6 +5,10 @@ using System.Diagnostics;
 using System.IO;
 using System.ComponentModel;
 using static TransplanterLib.PropertyReader;
+using System.Collections.Concurrent;
+using System.Threading.Tasks;
+using System.Linq;
+using TransplanterLib.MEM;
 
 namespace TransplanterLib
 {
@@ -105,6 +109,51 @@ namespace TransplanterLib
             Console.WriteLine("newdata size vs old: " + newdata.Length + " vs " + ent.Data.Length);
             ent.Data = m.ToArray();
             Console.WriteLine("Export has changed: " + ent.hasChanged);
+            // ent.DataSize = ent.Data.Length;
+        }
+
+        /// <summary>
+        /// Replaces the data for an export with the data for a SWF (GFX) file.
+        /// </summary>
+        /// <param name="ent">Export Entry to update data for</param>
+        /// <param name="swf_path">SWF file to use as new data. This technically will work with any file.</param>
+        static byte[] getReplacedSWFExportData(byte[] originalData, string swf_path)
+        {
+            byte[] swf_file = File.ReadAllBytes(swf_path);
+            byte[] header = copyByteChunk(originalData, 0, 20);
+            byte[] number1 = System.BitConverter.GetBytes(swf_file.Length + 4);
+            byte[] filler = copyByteChunk(originalData, 24, 4);
+            byte[] number2 = System.BitConverter.GetBytes(swf_file.Length);
+
+            int originalSize = System.BitConverter.ToInt32(originalData, 28);
+
+            byte[] bytefooter = copyByteChunk(originalData, 32 + originalSize, originalData.Length - 32 - originalSize);
+
+            MemoryStream m = new MemoryStream();
+            //updating array metadata, length, datasize
+            for (int i = 0; i < header.Length; i++)
+                m.WriteByte(header[i]);
+
+            for (int i = 0; i < number1.Length; i++)
+                m.WriteByte(number1[i]);
+
+            for (int i = 0; i < filler.Length; i++)
+                m.WriteByte(filler[i]);
+
+            for (int i = 0; i < number2.Length; i++)
+                m.WriteByte(number2[i]);
+
+            //set swf binary data
+            for (int i = 0; i < swf_file.Length; i++)
+                m.WriteByte(swf_file[i]);
+
+            //write remaining footer data that was there originally
+            for (int i = 0; i < bytefooter.Length; i++)
+                m.WriteByte(bytefooter[i]);
+            return m.ToArray();
+            //Console.WriteLine("newdata size vs old: " + newdata.Length + " vs " + originalData.Length);
+            //ent.Data = m.ToArray();
+            //Console.WriteLine("Export has changed: " + ent.hasChanged);
             // ent.DataSize = ent.Data.Length;
         }
 
@@ -373,6 +422,84 @@ namespace TransplanterLib
         }
 
         /// <summary>
+        /// Replaces all SWF files in a specified PCC. As each export is scanned, if it is a GFX export and a correspondingly named packagename.sf file exists, it will be repalced. This is the MEM based version.
+        /// </summary>
+        /// <param name="gfxSourceFolder">Source folder, with gfx files in the root.</param>
+        /// <param name="destinationFile">File to update GFX files in</param>
+        public static int replaceSWFs_MEM(string gfxSourceFolder, string destinationFile, BackgroundWorker worker = null)
+        {
+            bool replaced = false;
+            string[] gfxfiles = System.IO.Directory.GetFiles(gfxSourceFolder, "*.swf");
+            List<String> packobjnames = new List<String>();
+            foreach (string gfxfile in gfxfiles)
+            {
+                string packobjname = Path.GetFileNameWithoutExtension(gfxfile);
+                writeVerboseLine("SWF in source folder: " + packobjname);
+                packobjnames.Add(packobjname);
+            }
+
+            if (gfxfiles.Length > 0)
+            {
+                string backupfile = destinationFile + ".bak";
+                if (File.Exists(backupfile))
+                {
+                    File.Delete(backupfile);
+                }
+                File.Move(destinationFile, backupfile);
+                writeVerboseLine("Scanning " + destinationFile);
+                int numReplaced = 0;
+                Package pcc = new Package(backupfile);
+                int numExports = pcc.exportsTable.Count;
+                for (int i = 0; i < numExports; i++)
+                {
+                    Package.ExportEntry exp = pcc.exportsTable[i];
+                    //PCCObject.ExportEntry exp = pcc.Exports[i];
+
+                    if (pcc.getClassName(exp.classId) == "GFxMovieInfo")
+                    {
+                        string packobjname = pcc.resolvePackagePath((int)exp.id);
+                        int index = packobjnames.IndexOf(packobjname);
+                        if (index > -1)
+                        {
+                            writeVerboseLine("#" + i + " Replacing " + packobjname + "." + exp.objectName);
+                            pcc.setExportData((int)exp.id, getReplacedSWFExportData(pcc.getExportData((int)exp.id), gfxfiles[index]));
+                            //replace_swf_file(exp, gfxfiles[index]);
+                            numReplaced++;
+                            replaced = true;
+                        }
+                    }
+                    if (worker != null && numReplaced % 10 == 0)
+                    {
+                        //Console.WriteLine("Progress: " + i + " / "+numExports);
+                        worker.ReportProgress((int)(((double)i / numExports) * 100));
+                    }
+                }
+                writeVerboseLine("Replaced " + numReplaced + " files, saving.");
+                if (replaced)
+                {
+                    //pcc.saveByReconstructing(destinationFile); //34 is default
+                    Console.WriteLine("Saving pcc: "+ destinationFile);
+                    pcc.SaveToFile(destinationFile);
+                    pcc.Dispose();
+                    // pcc.save(destinationFile);
+                    return VerifyPCC(destinationFile);
+                }
+                else
+                {
+                    pcc.Dispose();
+                    Console.WriteLine("No SWFs replaced, moving file back to original location: "+ destinationFile);
+                    File.Move(backupfile, destinationFile);
+                    return 0;
+                }
+            }
+            else
+            {
+                Console.WriteLine("No source GFX files were found.");
+                return 1;
+            }
+        }
+
+        /// <summary>
         /// Formats arguments as a string
         /// </summary>
         /// <param name="filename">EXE file</param>
@@ -410,8 +537,6 @@ namespace TransplanterLib
             {
                 Console.Error.WriteLine("PCC Failed to load, threw exception: ");
                 throw e;
-                Console.Error.WriteLine(e.ToString());
-                return 1;
             }
         }
 
@@ -1100,7 +1225,7 @@ namespace TransplanterLib
         }
         public static void dumpModMakerWeaponDynamicSQL(string filepath)
         {
-            string[] files = Directory.GetFiles(filepath,"*.pcc");
+           /* string[] files = Directory.GetFiles(filepath, "*.pcc");
             foreach (String path in files)
             {
                 string fname = Path.GetFileName(path);
@@ -1143,7 +1268,7 @@ namespace TransplanterLib
                 try
                 {
                     string savepath = Path.GetFileNameWithoutExtension(path) + ".sql";
-                    using (StreamWriter stringoutput = new StreamWriter(Directory.GetParent(path) + "\\"+ savepath))
+                    using (StreamWriter stringoutput = new StreamWriter(Directory.GetParent(path) + "\\" + savepath))
                     {
                         Console.WriteLine("outputting to " + Directory.GetParent(path) + savepath);
                         int numDone = 1;
@@ -1285,7 +1410,7 @@ namespace TransplanterLib
                 {
                     Console.WriteLine("Exception parsing " + path + "\n" + e.Message);
                 }
-            }
+            }*/
 
         }
     }

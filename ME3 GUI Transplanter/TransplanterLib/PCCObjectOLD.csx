@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using Gibbed.IO;
-using AmaroK86.MassEffect3.ZlibBlock;
 using System.Diagnostics;
 using System.Reflection;
 

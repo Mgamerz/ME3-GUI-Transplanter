@@ -6,9 +6,9 @@ using System.Runtime.InteropServices;
 // General Information about an assembly is controlled through the following 
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
-[assembly: AssemblyCompany("Mgamerz Productions")]
-[assembly: AssemblyProduct("ME3 GFX Transplanter/PCC Dumper")]
-[assembly: AssemblyCopyright("Copyright © ME3Tweaks 2016")]
+[assembly: AssemblyCompany("ME3Tweaks")]
+[assembly: AssemblyProduct("Mass Effect 3 GFX Transplanter and PCC Data Dumper")]
+[assembly: AssemblyCopyright("Copyright © ME3Tweaks 2017")]
 [assembly: AssemblyTrademark("")]
 
 // Make it easy to distinguish Debug and Release (i.e. Retail) builds;
@@ -36,11 +36,11 @@ using System.Runtime.InteropServices;
 // to distinguish one build from another. AssemblyFileVersion is specified
 // in AssemblyVersionInfo.cs so that it can be easily incremented by the
 // automated build process.
-[assembly: AssemblyVersion("1.0.0.7")]
+[assembly: AssemblyVersion("1.0.0.10")]
 
 // By default, the "Product version" shown in the file properties window is
 // the same as the value specified for AssemblyFileVersionAttribute.
 // Set AssemblyInformationalVersionAttribute to be the same as
 // AssemblyVersionAttribute so that the "Product version" in the file
 // properties window matches the version displayed in the GAC shell extension.
-[assembly: AssemblyInformationalVersion("1.0.0.7")] // a.k.a. "Product version"
+[assembly: AssemblyInformationalVersion("1.0.0.10")] // a.k.a. "Product version"

@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using Gibbed.IO;
-using AmaroK86.MassEffect3.ZlibBlock;
 
 namespace TransplanterLib
 {
@@ -141,8 +140,8 @@ namespace TransplanterLib
                     buff = new byte[compressedSize];
                     input.Seek(compressedOffset, SeekOrigin.Begin);
                     input.Read(buff, 0, buff.Length);
-
-                    byte[] temp = ZBlock.Decompress(buff, 0, buff.Length);
+                    byte[] temp = new byte[uncompressedSize];
+                    ZlibHelper.Zlib.Decompress(buff, compressedSize, temp);
                     output.Seek(uncompressedOffset, SeekOrigin.Begin);
                     output.Write(temp, 0, temp.Length);
                 }
@@ -321,7 +320,7 @@ namespace TransplanterLib
 
                 byte[] inputBlock = new byte[currentUncBlockSize];
                 uncompressedPcc.Read(inputBlock, 0, (int)currentUncBlockSize);
-                byte[] compressedBlock = ZBlock.Compress(inputBlock, 0, inputBlock.Length);
+                byte[] compressedBlock = ZlibHelper.Zlib.Compress(inputBlock);
 
                 outputStream.WriteValueS32(compressedBlock.Length);
                 outOffsetBlockInfo = outputStream.Position;

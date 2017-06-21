@@ -11,7 +11,7 @@ namespace TransplanterLib
     public partial class Interpreter
     {
 
-        public PCCObject Pcc { get { return pcc; } set {pcc = value; defaultStructValues.Clear(); } }
+        public PCCObject Pcc { get { return pcc; } set { pcc = value; defaultStructValues.Clear(); } }
         public int Index;
         public string className;
         public byte[] memory;
@@ -60,7 +60,7 @@ namespace TransplanterLib
             DelegateProperty = 10,
             None,
             BioMask4Property,
-            
+
             ArrayLeafObject,
             ArrayLeafName,
             ArrayLeafEnum,
@@ -85,8 +85,8 @@ namespace TransplanterLib
 
             Root,
         }
-        
-        
+
+
         private int lastSetOffset = -1; //offset set by program, used for checking if user changed since set 
         private nodeType LAST_SELECTED_PROP_TYPE = nodeType.Unknown; //last property type user selected. Will use to check the current offset for type
         private TreeNode LAST_SELECTED_NODE = null; //last selected tree node
@@ -178,7 +178,7 @@ namespace TransplanterLib
                                 }
                                 else if (arrayListPropHeaders.Count > 0)
                                 {
-                                    GenerateTree(n, arrayListPropHeaders); 
+                                    GenerateTree(n, arrayListPropHeaders);
                                 }
                                 else
                                 {
@@ -287,7 +287,7 @@ namespace TransplanterLib
                                     node.Tag = nodeType.ArrayLeafBool;
                                     s += BitConverter.ToBoolean(memory, pos);
                                     i += 1;
-                                } 
+                                }
                                 else if (arrayType == UnrealObjectInfo.ArrayType.String)
                                 {
                                     node.Tag = nodeType.ArrayLeafString;
@@ -384,7 +384,7 @@ namespace TransplanterLib
                         string s = readerpos.ToString("X4") + ": " + pcc.getNameEntry(props[i].Name) + " : ";
                         readerpos = GenerateSpecialStructProp(t, s, readerpos, props[i]);
                     }
-                } 
+                }
             }
 
             #region Old method
@@ -716,7 +716,7 @@ namespace TransplanterLib
                                     type = PropertyReader.Type.IntProperty;
                                     break;
                             }
-                            pos = GenerateSpecialStructProp(node, s2, pos, new PropertyReader.Property { TypeVal = type,  Size = size});
+                            pos = GenerateSpecialStructProp(node, s2, pos, new PropertyReader.Property { TypeVal = type, Size = size });
                         }
                     }
                     t.Nodes.Add(node);
@@ -761,7 +761,7 @@ namespace TransplanterLib
                     break;
                 case nodeType.ObjectProperty:
                     idx = BitConverter.ToInt32(memory, p.offset + 24);
-                    s += idx.ToString() +  " (" + pcc.getObjectName(idx) + ")";
+                    s += idx.ToString() + " (" + pcc.getObjectName(idx) + ")";
                     break;
                 case nodeType.StrProperty:
                     int count = BitConverter.ToInt32(memory, p.offset + 24);
@@ -787,16 +787,16 @@ namespace TransplanterLib
                     s += "\"" + pcc.getNameEntry(idx) + "\"";
                     break;
                 case nodeType.ByteProperty:
-                    if(p.size == 1)
+                    if (p.size == 1)
                     {
                         val = memory[p.offset + 32];
                         s += val.ToString();
                     }
                     else
-	                {
+                    {
                         idx = BitConverter.ToInt32(memory, p.offset + 24);
                         int idx2 = BitConverter.ToInt32(memory, p.offset + 32);
-                        s += "\"" + pcc.getNameEntry(idx) + "\",\"" + pcc.getNameEntry(idx2) + "\""; 
+                        s += "\"" + pcc.getNameEntry(idx) + "\",\"" + pcc.getNameEntry(idx2) + "\"";
                     }
                     break;
                 case nodeType.ArrayProperty:
@@ -835,7 +835,7 @@ namespace TransplanterLib
                 {
                     //nothing else to interpret.
                     run = false;
-                    continue; 
+                    continue;
                 }
                 p.name = BitConverter.ToInt32(memory, readerpos);
                 if (!pcc.isName(p.name))
@@ -875,7 +875,7 @@ namespace TransplanterLib
             }
             return ret;
         }
-        
+
         public void PrintNodes(List<TreeNode> t, FileStream fs, int depth)
         {
             string tab = "";
@@ -910,7 +910,7 @@ namespace TransplanterLib
                 node = node.Parent;
             }
             bool isStruct = false;
-            while(nodeStack.Count > 0)
+            while (nodeStack.Count > 0)
             {
                 node = nodeStack.Pop();
                 if ((nodeType)node.Tag == nodeType.ArrayLeafStruct)
@@ -940,8 +940,8 @@ namespace TransplanterLib
                 type == nodeType.StructLeafStruct || type == nodeType.StructLeafObject);
         }
 
-        
-        
+
+
 
         private T[] RemoveIndices<T>(T[] IndicesArray, int RemoveAt, int NumElementsToRemove)
         {
@@ -956,10 +956,11 @@ namespace TransplanterLib
             while (i < IndicesArray.Length)
             {
                 if (i < RemoveAt || i >= RemoveAt + NumElementsToRemove)
-                {                    
+                {
                     newIndicesArray[j] = IndicesArray[i];
                     j++;
-                } else
+                }
+                else
                 {
                     //Debug.WriteLine("Skipping byte: " + i.ToString("X4"));
                 }

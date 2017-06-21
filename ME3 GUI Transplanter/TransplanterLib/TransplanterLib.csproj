@@ -20,6 +20,7 @@
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -28,12 +29,9 @@
     <DefineConstants>TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="AmaroK86.MassEffect3.ZlibBlock, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\libs\AmaroK86.MassEffect3.ZlibBlock.dll</HintPath>
-    </Reference>
     <Reference Include="CommandLine, Version=1.9.71.2, Culture=neutral, PublicKeyToken=de6f01bd326f8c32, processorArchitecture=MSIL">
       <HintPath>..\packages\CommandLineParser.1.9.71\lib\net45\CommandLine.dll</HintPath>
       <Private>True</Private>
@@ -65,12 +63,16 @@
     <Compile Include="Bytecode.cs" />
     <Compile Include="Function.cs" />
     <Compile Include="Interpreter.cs" />
+    <Compile Include="MEM\LZO2Helper.cs" />
+    <Compile Include="MEM\Package.cs" />
+    <Compile Include="MEM\StreamIO.cs" />
     <Compile Include="PCCHandler.cs" />
     <Compile Include="TalkFile.cs" />
     <Compile Include="TalkFiles.cs" />
     <Compile Include="TreeNode.cs" />
     <Compile Include="TreeNodeList.cs" />
     <Compile Include="UnrealObjectInfo.cs" />
+    <Compile Include="MEM\ZLibHelper.cs" />
     <None Include="ME3ObjectInfo.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
@@ -89,6 +91,9 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="NDesk.Options.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="zlibwrapper.dll">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
