@@ -843,6 +843,7 @@ namespace TransplanterLib
                 Boolean names = args[5];
                 Boolean separateExports = args[6];
                 Boolean properties = args[7];
+                Boolean pathfindingmesh = args[8];
 
                 PCCObject pcc = new PCCObject(file);
 
@@ -890,7 +891,7 @@ namespace TransplanterLib
                         stringoutput.WriteLine("--End of Imports");
                     }
 
-                    if (exports || scripts || data || coalesced)
+                    if (exports || scripts || data || coalesced || pathfindingmesh)
                     {
                         string datasets = "";
                         if (exports)
@@ -909,6 +910,10 @@ namespace TransplanterLib
                         {
                             datasets += "Data ";
                         }
+                        if (pathfindingmesh)
+                        {
+                            datasets += "Pathfinding Mesh ";
+                        }
 
                         stringoutput.WriteLine("--Start of " + datasets);
 
@@ -925,9 +930,11 @@ namespace TransplanterLib
                             writeVerboseLine("Parse export #" + index);
 
                             //Boolean isCoalesced = coalesced && exp.likelyCoalescedVal;
+                            String className = exp.ClassName;
                             Boolean isCoalesced = exp.likelyCoalescedVal;
-                            Boolean isScript = scripts && (exp.ClassName == "Function");
-                            Boolean isEnum = exp.ClassName == "Enum";
+                            Boolean isScript = scripts && (className == "Function");
+                            Boolean isEnum = className == "Enum";
+                            Boolean isPathfindingNode = className == "BioPathPoint" || className == "ReachSpec" || className == "SlotToSlotReachSpec" || className == "SFXNav_BoostNode" || className == "CoverLink" || className == "SFXDoorMarker" || className == "SFXEnemySpawnPoint" || className == "PathNode";
                             int progress = ((int)(((double)numDone / numTotal) * 100));
                             while (progress >= (lastProgress + 10))
                             {
@@ -935,19 +942,23 @@ namespace TransplanterLib
                                 needsFlush = true;
                                 lastProgress += 10;
                             }
-                            if (exports || data || isScript || isCoalesced)
+
+                            if (exports || data || isScript || isCoalesced || pathfindingmesh)
                             {
-                                if (separateExports)
+                                if (separateExports || (pathfindingmesh && isPathfindingNode))
                                 {
                                     stringoutput.WriteLine("=======================================================================");
                                 }
-                                stringoutput.Write("#" + index + " ");
-                                if (isCoalesced)
+                                if (!pathfindingmesh || (pathfindingmesh && isPathfindingNode))
+                                {
+                                    stringoutput.Write("#" + index + " ");
+                                }
+                                if (isCoalesced && coalesced)
                                 {
                                     stringoutput.Write("[C] ");
                                 }
 
-                                if (exports || isCoalesced || isScript)
+                                if (exports && exports|| isCoalesced && coalesced || isScript && scripts || isPathfindingNode && pathfindingmesh)
                                 {
                                     stringoutput.WriteLine(exp.PackageFullName + "." + exp.ObjectName + "(" + exp.ClassName + ") (Superclass: " + exp.ClassParentWrapped + ") (Data Offset: 0x " + exp.DataOffset.ToString("X4") + ")");
                                 }
@@ -964,7 +975,7 @@ namespace TransplanterLib
                                     Function func = new Function(exp.Data, pcc);
                                     stringoutput.WriteLine(func.ToRawText());
                                 }
-                                if (properties)
+                                if (properties || pathfindingmesh && isPathfindingNode)
                                 {
                                     Interpreter i = new Interpreter();
                                     i.Pcc = pcc;

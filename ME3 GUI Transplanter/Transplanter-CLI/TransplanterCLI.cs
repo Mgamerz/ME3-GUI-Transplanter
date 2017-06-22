@@ -157,7 +157,7 @@ namespace Transplanter_CLI
                         {
                             GamePath += "\\";
                         }
-                        Console.WriteLine("game path set to " + GamePath);
+                        Console.WriteLine("Game path set to " + GamePath);
                     }
                     else
                     {
@@ -211,14 +211,17 @@ namespace Transplanter_CLI
                         Console.Error.WriteLine("Can only verify single pcc integrity, --inputfile is the only allowed input for this operation.");
                         endProgram(CODE_INPUT_FILE_NOT_FOUND);
                     }
-                } else if (options.PathFindingDump)
+                }
+                else if (options.PathFindingDump)
                 {
                     if (options.InputFile != null)
                     {
-                        Console.WriteLine("Dumping Pathfinding on file " + options.TargetFile);
-                        DumpMeshViewerFile(options.InputFile);
-                        endProgram(0);
+                        Console.WriteLine("Dumping Pathfinding on file " + options.InputFile);
+                        bool[] dumpargs = new bool[] { false, false, false, false, false, false, false, false, true }; //meshmap only
+                        dumpPCCFile(options.InputFile, dumpargs, options.OutputFolder);
                     }
+                    endProgram(0);
+
                 }
                 else if (options.GUIScan)
                 {
@@ -322,7 +325,7 @@ namespace Transplanter_CLI
                         {
                             options.Exports = true;
                         }
-                        bool[] dumpargs = new bool[] { options.Imports, options.Exports, options.Data, options.Scripts, options.Coalesced, options.Names, !options.LineSeparator, options.Properties };
+                        bool[] dumpargs = new bool[] { options.Imports, options.Exports, options.Data, options.Scripts, options.Coalesced, options.Names, !options.LineSeparator, options.Properties, false };
 
 
                         if (options.InputFile != null)
