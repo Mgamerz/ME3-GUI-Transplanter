@@ -8,7 +8,7 @@ using static TransplanterLib.PropertyReader;
 using System.Collections.Concurrent;
 using System.Threading.Tasks;
 using System.Linq;
-using TransplanterLib.MEM;
+using MassEffectModder;
 
 namespace TransplanterLib
 {
@@ -453,7 +453,6 @@ namespace TransplanterLib
                 for (int i = 0; i < numExports; i++)
                 {
                     Package.ExportEntry exp = pcc.exportsTable[i];
-                    //PCCObject.ExportEntry exp = pcc.Exports[i];
 
                     if (pcc.getClassName(exp.classId) == "GFxMovieInfo")
                     {
@@ -479,7 +478,7 @@ namespace TransplanterLib
                 {
                     //pcc.saveByReconstructing(destinationFile); //34 is default
                     Console.WriteLine("Saving pcc: "+ destinationFile);
-                    pcc.SaveToFile(destinationFile);
+                    pcc.SaveToFile(false,destinationFile);
                     pcc.Dispose();
                     // pcc.save(destinationFile);
                     return VerifyPCC(destinationFile);

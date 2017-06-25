@@ -4,6 +4,7 @@ using CommandLine.Text;
 using System.IO;
 using static TransplanterLib.TransplanterLib;
 using System.Diagnostics;
+using MassEffectModder;
 
 /// <summary>
 /// Transplanter CLI is the command line interface for TransplanterLib
@@ -131,6 +132,7 @@ namespace Transplanter_CLI
 
         static void Main(string[] args)
         {
+
             var options = new Options();
             CommandLine.Parser parser = new CommandLine.Parser(s =>
              {
@@ -141,6 +143,8 @@ namespace Transplanter_CLI
 
             if (parser.ParseArguments(args, options))
             {
+                Package p = new Package(options.TargetFile);
+                endProgram(0);
                 // Values are available here
                 if (options.Verbose)
                 {
