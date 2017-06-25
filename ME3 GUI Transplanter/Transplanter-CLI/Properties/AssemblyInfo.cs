@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
@@ -8,7 +8,7 @@ using System.Runtime.InteropServices;
 // associated with an assembly.
 [assembly: AssemblyCompany("ME3Tweaks")]
 [assembly: AssemblyProduct("Mass Effect 3 GFX Transplanter and PCC Data Dumper")]
-[assembly: AssemblyCopyright("Copyright � ME3Tweaks 2017")]
+[assembly: AssemblyCopyright("Copyright © ME3Tweaks 2017")]
 [assembly: AssemblyTrademark("")]
 
 // Make it easy to distinguish Debug and Release (i.e. Retail) builds;

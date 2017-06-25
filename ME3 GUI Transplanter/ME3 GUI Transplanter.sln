@@ -1,18 +1,11 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
-VisualStudioVersion = 15.0.26430.13
+VisualStudioVersion = 15.0.26430.14
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TransplanterLib", "TransplanterLib\TransplanterLib.csproj", "{EDAE3FA0-2F60-428F-A2A5-CD72F7BF2195}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Transplanter-GUI", "Transplanter-GUI\Transplanter-GUI.csproj", "{864FF3BE-05BF-4C02-86FD-3296B6B71E7A}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Transplanter-CLI", "Transplanter-CLI\Transplanter-CLI.csproj", "{7CEC0153-3108-4C39-8B53-4B376C28F61C}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{6B383BE1-E939-4BED-8C3D-8038ECD0A872}"
-	ProjectSection(SolutionItems) = preProject
-		SharedAssemblyInfo.cs = SharedAssemblyInfo.cs
-	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -22,22 +15,6 @@ Global
 		Release|x86 = Release|x86
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{EDAE3FA0-2F60-428F-A2A5-CD72F7BF2195}.Debug|Any CPU.ActiveCfg = Debug|x86
-		{EDAE3FA0-2F60-428F-A2A5-CD72F7BF2195}.Debug|Any CPU.Build.0 = Debug|x86
-		{EDAE3FA0-2F60-428F-A2A5-CD72F7BF2195}.Debug|x86.ActiveCfg = Debug|x86
-		{EDAE3FA0-2F60-428F-A2A5-CD72F7BF2195}.Debug|x86.Build.0 = Debug|x86
-		{EDAE3FA0-2F60-428F-A2A5-CD72F7BF2195}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{EDAE3FA0-2F60-428F-A2A5-CD72F7BF2195}.Release|Any CPU.Build.0 = Release|Any CPU
-		{EDAE3FA0-2F60-428F-A2A5-CD72F7BF2195}.Release|x86.ActiveCfg = Release|x86
-		{EDAE3FA0-2F60-428F-A2A5-CD72F7BF2195}.Release|x86.Build.0 = Release|x86
-		{864FF3BE-05BF-4C02-86FD-3296B6B71E7A}.Debug|Any CPU.ActiveCfg = Debug|x86
-		{864FF3BE-05BF-4C02-86FD-3296B6B71E7A}.Debug|Any CPU.Build.0 = Debug|x86
-		{864FF3BE-05BF-4C02-86FD-3296B6B71E7A}.Debug|x86.ActiveCfg = Debug|x86
-		{864FF3BE-05BF-4C02-86FD-3296B6B71E7A}.Debug|x86.Build.0 = Debug|x86
-		{864FF3BE-05BF-4C02-86FD-3296B6B71E7A}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{864FF3BE-05BF-4C02-86FD-3296B6B71E7A}.Release|Any CPU.Build.0 = Release|Any CPU
-		{864FF3BE-05BF-4C02-86FD-3296B6B71E7A}.Release|x86.ActiveCfg = Release|x86
-		{864FF3BE-05BF-4C02-86FD-3296B6B71E7A}.Release|x86.Build.0 = Release|x86
 		{7CEC0153-3108-4C39-8B53-4B376C28F61C}.Debug|Any CPU.ActiveCfg = Debug|x86
 		{7CEC0153-3108-4C39-8B53-4B376C28F61C}.Debug|Any CPU.Build.0 = Debug|x86
 		{7CEC0153-3108-4C39-8B53-4B376C28F61C}.Debug|x86.ActiveCfg = Debug|x86

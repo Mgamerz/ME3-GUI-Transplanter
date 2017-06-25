@@ -45,6 +45,7 @@
     <ErrorReport>prompt</ErrorReport>
     <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
     <Prefer32Bit>true</Prefer32Bit>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|x86'">
     <OutputPath>bin\x86\Release\</OutputPath>
@@ -61,8 +62,15 @@
       <HintPath>..\packages\CommandLineParser.1.9.71\lib\net45\CommandLine.dll</HintPath>
       <Private>True</Private>
     </Reference>
+    <Reference Include="Gibbed.IO">
+      <HintPath>..\libs\Gibbed.IO.dll</HintPath>
+    </Reference>
+    <Reference Include="Newtonsoft.Json, Version=10.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <HintPath>..\packages\Newtonsoft.Json.10.0.3\lib\net45\Newtonsoft.Json.dll</HintPath>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
+    <Reference Include="System.Drawing" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="Microsoft.CSharp" />
@@ -71,26 +79,44 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="ME3Explorer\BitConverter.cs" />
+    <Compile Include="ME3Explorer\Bytecode.cs" />
+    <Compile Include="ME3Explorer\Function.cs" />
+    <Compile Include="ME3Explorer\Interpreter.cs" />
+    <Compile Include="MassEffectModder\LZO2Helper.cs" />
+    <Compile Include="MassEffectModder\Package.cs" />
+    <Compile Include="MassEffectModder\StreamIO.cs" />
+    <Compile Include="MassEffectModder\ZLibHelper.cs" />
+    <Compile Include="ME3Explorer\PCCHandler.cs" />
+    <Compile Include="ME3Explorer\PCCObject.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="ME3Explorer\PropertyReader.cs" />
+    <Compile Include="ME3Explorer\PropGrid.cs" />
+    <Compile Include="ME3Explorer\SFXEnum.cs" />
+    <Compile Include="ME3Explorer\TalkFile.cs" />
+    <Compile Include="ME3Explorer\TalkFiles.cs" />
     <Compile Include="TransplanterCLI.cs" />
-    <Compile Include="..\SharedAssemblyInfo.cs" />
+    <Compile Include="TransplanterLib.cs" />
+    <Compile Include="TreeNode.cs" />
+    <Compile Include="TreeNodeList.cs" />
+    <Compile Include="ME3Explorer\UnrealFlags.cs" />
+    <Compile Include="ME3Explorer\UnrealObjectInfo.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
     <None Include="ILMerge.props" />
+    <None Include="ME3ObjectInfo.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\TransplanterLib\TransplanterLib.csproj">
-      <Project>{edae3fa0-2f60-428f-a2a5-cd72f7bf2195}</Project>
-      <Name>TransplanterLib</Name>
-    </ProjectReference>
-  </ItemGroup>
-  <ItemGroup>
     <Content Include="ILMergeOrder.txt" />
+    <Content Include="NDesk.Options.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
-  <ItemGroup>
-    <Folder Include="Properties\" />
-  </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
     <PropertyGroup>
