@@ -10,6 +10,7 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyProduct("Mass Effect 3 GFX Transplanter and PCC Data Dumper")]
 [assembly: AssemblyCopyright("Copyright © ME3Tweaks 2017")]
 [assembly: AssemblyTrademark("")]
+[assembly: CLSCompliant(false)]
 
 // Make it easy to distinguish Debug and Release (i.e. Retail) builds;
 // for example, through the file properties window.
@@ -20,8 +21,6 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyConfiguration("Retail")]
 [assembly: AssemblyDescription("Flavor=Retail")] // a.k.a. "Comments"
 #endif
-
-[assembly: CLSCompliant(true)]
 
 // Setting ComVisible to false makes the types in this assembly not visible 
 // to COM components.  If you need to access a type in this assembly from 
