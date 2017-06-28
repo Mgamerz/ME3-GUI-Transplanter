@@ -2,14 +2,16 @@
 using CommandLine;
 using CommandLine.Text;
 using System.IO;
-using static TransplanterLib.TransplanterLib;
 using System.Diagnostics;
 using MassEffectModder;
+using TransplanterLib;
+using System.Reflection;
+using static TransplanterLib.TransplanterLib;
 
 /// <summary>
-/// Transplanter CLI is the command line interface for TransplanterLib
+/// Transplanter CLI - Main Class
 /// </summary>
-namespace Transplanter_CLI
+namespace TransplanterLib
 {
     class Options
     {
@@ -29,7 +31,9 @@ namespace Transplanter_CLI
             HelpText = "File to be operated on.")]
         public string TargetFile { get; set; }
 
-
+        [Option("compress",
+            HelpText = "Forces output pcc files to be compressed.")]
+        public bool Compress { get; set; }
 
         //Operations
         [Option('p', "transplant", MutuallyExclusiveSet = "operation",
@@ -125,14 +129,13 @@ namespace Transplanter_CLI
         private static readonly int CODE_NO_OPERATION = 10;
         private static readonly int CODE_INPUT_FILE_NOT_FOUND = 11;
         private static readonly int CODE_INPUT_FOLDER_NOT_FOUND = 12;
-        private static readonly int CODE_NO_TRANSPLANT_FILE = 13;
+        //private static readonly int CODE_NO_TRANSPLANT_FILE = 13;
         private static readonly int CODE_NO_DATA_TO_DUMP = 14;
         private static readonly int CODE_SAME_IN_OUT_FILE = 15;
 
 
         static void Main(string[] args)
         {
-
             var options = new Options();
             CommandLine.Parser parser = new CommandLine.Parser(s =>
              {
@@ -143,8 +146,8 @@ namespace Transplanter_CLI
 
             if (parser.ParseArguments(args, options))
             {
-                Package p = new Package(options.TargetFile);
-                endProgram(0);
+                //Package p = new Package(options.TargetFile);
+                //endProgram(0);
                 // Values are available here
                 if (options.Verbose)
                 {
@@ -292,7 +295,7 @@ namespace Transplanter_CLI
                     else if (options.InputFolder != null)
                     {
                         Console.WriteLine("Injecting SWFs into " + options.TargetFile);
-                        endProgram(replaceSWFs_MEM(options.InputFolder, options.TargetFile));
+                        endProgram(replaceSWFs_MEM(options.InputFolder, options.TargetFile, options.Compress));
                     }
                 }
                 else if (options.GuiExtract)
@@ -383,7 +386,7 @@ namespace Transplanter_CLI
                     writeVerboseLine("Extracting GFX Files from source to " + gfxfolder);
                     extractAllGFxMovies(options.InputFile, gfxfolder);
                     Console.WriteLine("Installing GUI files");
-                    replaceSWFs(gfxfolder, options.TargetFile);
+                    replaceSWFs(gfxfolder, options.TargetFile,options.Compress);
                 }
                 else
                 {

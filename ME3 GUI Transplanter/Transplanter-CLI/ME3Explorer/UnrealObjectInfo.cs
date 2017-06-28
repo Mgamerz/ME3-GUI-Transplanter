@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.IO;
 using Newtonsoft.Json;
+using System.Reflection;
 
 namespace TransplanterLib
 {
@@ -119,26 +120,21 @@ namespace TransplanterLib
             {
                 return;
             }
-            string path = Path.GetDirectoryName(new Uri(System.Reflection.Assembly.GetExecutingAssembly().CodeBase).LocalPath) + "\\ME3ObjectInfo.json";
-            try
+
+            var assembly = Assembly.GetExecutingAssembly();
+            var resourceName = "Transplanter_CLI.ME3ObjectInfo.json";
+
+            using (Stream stream = assembly.GetManifestResourceStream(resourceName))
+            
             {
-                if (File.Exists(path))
-                {
-                    string raw = File.ReadAllText(path);
-                    var blob = JsonConvert.DeserializeAnonymousType(raw, new { SequenceObjects, Classes, Structs, Enums });
-                    SequenceObjects = blob.SequenceObjects;
-                    Classes = blob.Classes;
-                    Structs = blob.Structs;
-                    Enums = blob.Enums;
-                    loaded = true;
-                } else
-                {
-                    Console.WriteLine("ERROR LOADING JSON");
-                }
-            }
-            catch (Exception)
-            {
-                Console.WriteLine("json not loaded");
+                TextReader tr = new StreamReader(stream);
+                string raw = tr.ReadToEnd();
+                var blob = JsonConvert.DeserializeAnonymousType(raw, new { SequenceObjects, Classes, Structs, Enums });
+                SequenceObjects = blob.SequenceObjects;
+                Classes = blob.Classes;
+                Structs = blob.Structs;
+                Enums = blob.Enums;
+                loaded = true;
             }
         }
 

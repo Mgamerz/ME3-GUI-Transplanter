@@ -56,6 +56,28 @@
     <ErrorReport>prompt</ErrorReport>
     <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
     <Prefer32Bit>true</Prefer32Bit>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|x64'">
+    <DebugSymbols>true</DebugSymbols>
+    <OutputPath>bin\x64\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <DebugType>full</DebugType>
+    <PlatformTarget>x64</PlatformTarget>
+    <ErrorReport>prompt</ErrorReport>
+    <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
+    <Prefer32Bit>true</Prefer32Bit>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|x64'">
+    <OutputPath>bin\x64\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <Optimize>true</Optimize>
+    <DebugType>pdbonly</DebugType>
+    <PlatformTarget>x64</PlatformTarget>
+    <ErrorReport>prompt</ErrorReport>
+    <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
+    <Prefer32Bit>true</Prefer32Bit>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="CommandLine, Version=1.9.71.2, Culture=neutral, PublicKeyToken=de6f01bd326f8c32, processorArchitecture=MSIL">
@@ -64,6 +86,9 @@
     </Reference>
     <Reference Include="Gibbed.IO">
       <HintPath>..\libs\Gibbed.IO.dll</HintPath>
+    </Reference>
+    <Reference Include="ICSharpCode.SharpZipLib">
+      <HintPath>..\libs\ICSharpCode.SharpZipLib.dll</HintPath>
     </Reference>
     <Reference Include="Newtonsoft.Json, Version=10.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
       <HintPath>..\packages\Newtonsoft.Json.10.0.3\lib\net45\Newtonsoft.Json.dll</HintPath>
@@ -79,6 +104,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="MassEffectModder\ZlibHelper.cs" />
     <Compile Include="ME3Explorer\BitConverter.cs" />
     <Compile Include="ME3Explorer\Bytecode.cs" />
     <Compile Include="ME3Explorer\Function.cs" />
@@ -86,9 +112,10 @@
     <Compile Include="MassEffectModder\LZO2Helper.cs" />
     <Compile Include="MassEffectModder\Package.cs" />
     <Compile Include="MassEffectModder\StreamIO.cs" />
-    <Compile Include="MassEffectModder\ZLibHelper.cs" />
     <Compile Include="ME3Explorer\PCCHandler.cs" />
+    <Compile Include="ME3Explorer\PCCObject - Copy.cs" />
     <Compile Include="ME3Explorer\PCCObject.cs" />
+    <Compile Include="ME3Explorer\ZlibBlock.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="ME3Explorer\PropertyReader.cs" />
     <Compile Include="ME3Explorer\PropGrid.cs" />
@@ -105,18 +132,14 @@
   <ItemGroup>
     <None Include="App.config" />
     <None Include="ILMerge.props" />
-    <None Include="ME3ObjectInfo.json">
+    <EmbeddedResource Include="ME3ObjectInfo.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
+    </EmbeddedResource>
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="ILMergeOrder.txt" />
-    <Content Include="NDesk.Options.dll">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
   </ItemGroup>
-  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
     <PropertyGroup>
@@ -127,7 +150,7 @@
   </Target>
   <Import Project="..\packages\MSBuild.ILMerge.Task.1.0.5\build\MSBuild.ILMerge.Task.targets" Condition="Exists('..\packages\MSBuild.ILMerge.Task.1.0.5\build\MSBuild.ILMerge.Task.targets')" />
   <PropertyGroup>
-    <PostBuildEvent>copy "$(SolutionDir)libs\zlibwrapper.dll" "$(TargetDir)zlibwrapper.dll" /y</PostBuildEvent>
+    <PostBuildEvent>copy "$(SolutionDir)libs\zlibwrapper-32bit.dll" "$(TargetDir)zlibwrapper.dll" /y</PostBuildEvent>
   </PropertyGroup>
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

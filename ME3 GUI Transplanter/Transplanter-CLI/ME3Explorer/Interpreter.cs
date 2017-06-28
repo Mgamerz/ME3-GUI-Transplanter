@@ -87,9 +87,6 @@ namespace TransplanterLib
         }
 
 
-        private int lastSetOffset = -1; //offset set by program, used for checking if user changed since set 
-        private nodeType LAST_SELECTED_PROP_TYPE = nodeType.Unknown; //last property type user selected. Will use to check the current offset for type
-        private TreeNode LAST_SELECTED_NODE = null; //last selected tree node
         private const int HEXBOX_MAX_WIDTH = 650;
 
         private PCCObject pcc;

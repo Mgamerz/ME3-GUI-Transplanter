@@ -52,8 +52,8 @@ namespace ZlibHelper
             if (inStream.Position + size > inStream.Length)
                 return 0;
             byte[] buffer = new byte[size];
-            inStream.Read(buffer, 0, (int) size);
-            return Decompress(buffer, size, destBuf );
+            inStream.Read(buffer, 0, (int)size);
+            return Decompress(buffer, size, destBuf);
         }
 
         public unsafe static byte[] Compress(byte[] src, int compressionLevel = -1)

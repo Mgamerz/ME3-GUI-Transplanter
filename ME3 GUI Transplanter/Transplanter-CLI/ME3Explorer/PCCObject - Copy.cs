@@ -4,12 +4,11 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using Gibbed.IO;
-using AmaroK86.MassEffect3.ZlibBlock;
 using System.Diagnostics;
 
 namespace TransplanterLib
 {
-    public class PCCObject
+    public class PCCObject2
     {
         public string pccFileName { get; private set; }
 
@@ -116,7 +115,7 @@ namespace TransplanterLib
         {
             public static int byteSize = 28;
             internal byte[] header = new byte[byteSize];
-            internal PCCObject pccRef;
+            internal PCCObject2 pccRef;
 
             public int idxPackageFile { get { return BitConverter.ToInt32(header, 0); } set { Buffer.BlockCopy(BitConverter.GetBytes(value), 0, header, 0, sizeof(int)); } }
             public int idxClassName { get { return BitConverter.ToInt32(header, 8); } set { Buffer.BlockCopy(BitConverter.GetBytes(value), 0, header, 8, sizeof(int)); } }
@@ -169,13 +168,13 @@ namespace TransplanterLib
                 }
             }
 
-            public ImportEntry(PCCObject pccFile, byte[] importData)
+            public ImportEntry(PCCObject2 pccFile, byte[] importData)
             {
                 pccRef = pccFile;
                 header = (byte[])importData.Clone();
             }
 
-            public ImportEntry(PCCObject pccFile, Stream importData)
+            public ImportEntry(PCCObject2 pccFile, Stream importData)
             {
                 pccRef = pccFile;
                 header = new byte[ImportEntry.byteSize];
@@ -193,7 +192,7 @@ namespace TransplanterLib
         public class ExportEntry : IEntry // class containing info about export entry (header info + data)
         {
             internal byte[] header; // holds data about export header, not the export data.
-            public PCCObject pccRef;
+            public PCCObject2 pccRef;
             public uint offset { get; set; }
 
             public int idxClass { get { return BitConverter.ToInt32(header, 0); } set { Buffer.BlockCopy(BitConverter.GetBytes(value), 0, header, 0, sizeof(int)); } }
@@ -299,8 +298,12 @@ namespace TransplanterLib
             }
             public bool hasChanged { get; internal set; }
 
-            public ExportEntry(PCCObject pccFile, byte[] importData, uint exportOffset)
+            public ExportEntry(PCCObject2 pccFile, byte[] importData, uint exportOffset)
             {
+                if (pccFile.pccFileName.Contains("Engine"))
+                {
+                    Debug.WriteLine("BREAK!");
+                }
                 pccRef = pccFile;
                 header = (byte[])importData.Clone();
                 offset = exportOffset;
@@ -334,10 +337,10 @@ namespace TransplanterLib
         }
 
         /// <summary>
-        ///     PCCObject class constructor. It also load namelist, importlist and exportinfo (not exportdata) from pcc file
+        ///     PCCObject2 class constructor. It also load namelist, importlist and exportinfo (not exportdata) from pcc file
         /// </summary>
         /// <param name="pccFilePath">full path + file name of desired pcc file.</param>
-        public PCCObject(string pccFilePath, bool fullFileInMemory = false)
+        public PCCObject2(string pccFilePath, bool fullFileInMemory = false)
         {
             Loaded = true;
             pccFileName = Path.GetFullPath(pccFilePath);
@@ -349,8 +352,8 @@ namespace TransplanterLib
                 Exports = new List<ExportEntry>();
 
                 pccStream.Read(header, 0, header.Length);
-                if (magic != ZBlock.magic &&
-                    magic.Swap() != ZBlock.magic)
+                if (magic !=  0x9E2A83C1&&
+                    magic.Swap() !=  0x9E2A83C1)
                 {
                     throw new FormatException("not a pcc file");
                 }
@@ -408,7 +411,9 @@ namespace TransplanterLib
 
                     // decompress first block that holds infos about names, imports and exports
                     pccStream.Seek(blockList[0].cprOffset, SeekOrigin.Begin);
-                    byte[] uncBlock = ZBlock.Decompress(pccStream, blockList[0].cprSize);
+                    byte[] uncBlock = new byte[blockList[0].uncSize];
+                    ZlibHelper.Zlib.Decompress(pccStream, (uint)blockList[0].cprSize, uncBlock);
+                    //byte[] uncBlock = ZBlock.Decompress(pccStream, blockList[0].cprSize);
 
                     // write decompressed block inside temporary stream
                     listsStream = new MemoryStream();
@@ -469,7 +474,7 @@ namespace TransplanterLib
 
                 // fill export list (only the headers, not the data)
                 listsStream.Seek(ExportOffset, SeekOrigin.Begin);
-                //Console.Out.WriteLine("Export OFFSET: " + ImportOffset);
+                Console.Out.WriteLine("Export OFFSET: " + ImportOffset);
                 for (int i = 0; i < ExportCount; i++)
                 {
                     uint expInfoOffset = (uint)listsStream.Position;
@@ -490,7 +495,7 @@ namespace TransplanterLib
             //Debug.WriteLine(getMetadataString());
         }
 
-        public PCCObject()
+        public PCCObject2()
         {
         }
 
@@ -504,12 +509,13 @@ namespace TransplanterLib
             if (bCompressed)
             {
                 Block selected = blockList.Find(block => block.uncOffset <= offset && block.uncOffset + block.uncSize > offset);
-                byte[] uncBlock;
-
+                //byte[] uncBlock;
+                byte[] uncBlock = new byte[selected.uncSize];
                 using (FileStream pccStream = File.OpenRead(pccFileName))
                 {
                     pccStream.Seek(selected.cprOffset, SeekOrigin.Begin);
-                    uncBlock = ZBlock.Decompress(pccStream, selected.cprSize);
+                    ZlibHelper.Zlib.Decompress(pccStream, (uint)selected.cprSize, uncBlock);
+                    //byte[] uncBlock = ZBlock.Decompress(pccStream, blockList[0].cprSize);
 
                     // the selected block has been read
                     selected.bRead = true;
@@ -573,7 +579,7 @@ namespace TransplanterLib
         }
 
         /// <summary>
-        ///     save PCCObject to file by reconstruction from data
+        ///     save PCCObject2 to file by reconstruction from data
         /// </summary>
         /// <param name="path">full path + file name.</param>
         /// <param name="compress">true if you want a zlib compressed pcc file.</param>
@@ -745,7 +751,7 @@ namespace TransplanterLib
                 Names.Add(name);
         }
 
-        public void addImport(PCCObject.ImportEntry importEntry)
+        public void addImport(PCCObject2.ImportEntry importEntry)
         {
             if (importEntry.pccRef != this)
                 throw new Exception("you cannot add a new import entry from another pcc file, it has invalid references!");
