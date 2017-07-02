@@ -841,6 +841,7 @@ namespace TransplanterLib
                 Boolean separateExports = args[6];
                 Boolean properties = args[7];
                 Boolean pathfindingmesh = args[8];
+                Boolean swf = args[9];
 
                 PCCObject pcc = new PCCObject(file);
 
@@ -914,17 +915,28 @@ namespace TransplanterLib
 
                         stringoutput.WriteLine("--Start of " + datasets);
 
-
                         int numDone = 1;
                         int numTotal = pcc.Exports.Count;
                         int lastProgress = 0;
                         writeVerboseLine("Enumerating exports");
                         Boolean needsFlush = false;
                         int index = 0;
+                        string swfoutfolder = outfolder + Path.GetFileNameWithoutExtension(file) + "\\";
                         foreach (PCCObject.ExportEntry exp in pcc.Exports)
                         {
                             index++;
                             writeVerboseLine("Parse export #" + index);
+
+                            if (swf)
+                            {
+                                if (exp.ClassName == "GFxMovieInfo")
+                                {
+                                    Directory.CreateDirectory(swfoutfolder);
+                                    String fname = exp.ObjectName;
+                                    writeVerboseLine("Dumping SWF file: " + swfoutfolder + exp.PackageFullName + "." + fname + ".swf");
+                                    extract_swf(exp, swfoutfolder + exp.PackageFullName + "." + fname + ".swf");
+                                }
+                            }
 
                             //Boolean isCoalesced = coalesced && exp.likelyCoalescedVal;
                             String className = exp.ClassName;

@@ -44,6 +44,10 @@ namespace TransplanterLib
             HelpText = "Extracts all GFX files from the input (--inputfile or --inputfolder) into a folder of the same name as the pcc file. With --outputfolder you can redirect the output.")]
         public bool GuiExtract { get; set; }
 
+        [Option("swfs",
+            HelpText = "Option for use with --extract to additionally extract SWF/GFX files. Will place into a subfolder of the PCC's name in the output directory.")]
+        public bool SWFs { get; set; }
+
         [Option('u', "exec-dump", MutuallyExclusiveSet = "operation",
           HelpText = "Dumps all exec functions from the specified file or folder into a file named ExecFunctions.txt (in the same folder as the file or in the specified folder). To redirect the placement of the ExecFunctions.txt file, use the --outputfolder.")]
         public bool ExecDump { get; set; }
@@ -154,6 +158,11 @@ namespace TransplanterLib
                     Verbose = true;
                     writeVerboseLine("Verbose logging is enabled");
                 }
+                if (options.Compress && !Environment.Is64BitProcess)
+                {
+                    Console.WriteLine("Not 64-bit process - Disabling compression due to bugs in zlib.");
+                    options.Compress = false;
+                }
 
                 if (options.GameDir != null)
                 {
@@ -175,7 +184,7 @@ namespace TransplanterLib
 
                 if (options.InputFile == null && options.InputFolder == null)
                 {
-                    Console.Error.WriteLine("--inputfile or --inputfolder argument is required for all operations. TEST");
+                    Console.Error.WriteLine("--inputfile or --inputfolder argument is required for all operations.");
                     Console.Error.WriteLine(options.GetUsage());
                     endProgram(CODE_NO_INPUT);
                 }
@@ -224,7 +233,7 @@ namespace TransplanterLib
                     if (options.InputFile != null)
                     {
                         Console.WriteLine("Dumping Pathfinding on file " + options.InputFile);
-                        bool[] dumpargs = new bool[] { false, false, false, false, false, false, false, false, true }; //meshmap only
+                        bool[] dumpargs = new bool[] { false, false, false, false, false, false, false, false, true, false }; //meshmap only
                         dumpPCCFile(options.InputFile, dumpargs, options.OutputFolder);
                     }
                     endProgram(0);
@@ -326,33 +335,33 @@ namespace TransplanterLib
                 }
                 else if (options.Extract)
                 {
-                    if (options.Imports || options.Exports || options.Data || options.Scripts || options.Coalesced || options.Names)
+                    if (options.Imports || options.Exports || options.Data || options.Scripts || options.Coalesced || options.Names || options.SWFs)
                     {
                         if (options.Data)
                         {
                             options.Exports = true;
                         }
-                        bool[] dumpargs = new bool[] { options.Imports, options.Exports, options.Data, options.Scripts, options.Coalesced, options.Names, !options.LineSeparator, options.Properties, false };
+                        bool[] dumpargs = new bool[] { options.Imports, options.Exports, options.Data, options.Scripts, options.Coalesced, options.Names, !options.LineSeparator, options.Properties, false, options.SWFs };
 
 
                         if (options.InputFile != null)
                         {
                             Console.Out.WriteLine("Dumping pcc data of " + options.InputFile +
                             " [Imports: " + options.Imports + ", Exports: " + options.Exports + ", Data: " + options.Data + ", Scripts: " + options.Scripts +
-                            ", Coalesced: " + options.Coalesced + ", Names: " + options.Names + ", Properties: " + options.Properties + "]");
+                            ", Coalesced: " + options.Coalesced + ", Names: " + options.Names + ", Properties: " + options.Properties + ", SWF: "+options.SWFs+"]");
                             dumpPCCFile(options.InputFile, dumpargs, options.OutputFolder);
                         }
                         if (options.InputFolder != null)
                         {
                             Console.Out.WriteLine("Dumping pcc data from " + options.InputFolder +
                             " [Imports: " + options.Imports + ", Exports: " + options.Exports + ", Data: " + options.Data + ", Scripts: " + options.Scripts +
-                            ", Coalesced: " + options.Coalesced + ", Names: " + options.Names + ", Properties: " + options.Properties + "]");
+                            ", Coalesced: " + options.Coalesced + ", Names: " + options.Names + ", Properties: " + options.Properties + ", SWF: " + options.SWFs + "]");
                             dumpPCCFolder(options.InputFolder, dumpargs, options.OutputFolder);
                         }
                     }
                     else
                     {
-                        Console.Error.WriteLine("Nothing was selected to dump. Use --scripts, --names, --data, --imports, --exports or --coalesced to dump items from a pcc.");
+                        Console.Error.WriteLine("Nothing was selected to dump. Use --scripts, --names, --data, --imports, --exports, --swf or --coalesced to dump items from a pcc.");
                         endProgram(CODE_NO_DATA_TO_DUMP);
                     }
                 }
