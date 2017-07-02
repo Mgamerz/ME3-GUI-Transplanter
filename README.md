@@ -1,19 +1,13 @@
 ## Mass Effect 3 GUI Transplanter / PCC Data Dumper
-Transplants GFX files from one PCC to another in ME3, as well as dumping useful information from PCC files into text files for easy searching. Will eventually be integrated into [Mod Manager](http://github.com/mgamerz/me3modmanager) to quickly fix override conflicts between DLC mods with the Mass Effect 3 controller mods.
+Transplants GFX files from one PCC to another in ME3, as well as dumping useful information from PCC files into text files for easy searching. Integrated into [Mass Effect 3 Mod Manager](http://github.com/mgamerz/me3modmanager) to quickly fix override conflicts between DLC mods with the Mass Effect 3 controller mods, and allow easy dumping of files for searchability.
 
 [![Download Latest Build](https://github.com/Mgamerz/ME3-GUI-Transplanter/raw/static/download-button.png)](https://github.com/Mgamerz/ME3-GUI-Transplanter/releases/latest)
 
 ---
-
-### Graphical User Interface
-Can transplant files one pcc to another. Made to be simple to use with only a single task.
-
-![GUI Image](https://github.com/Mgamerz/ME3-GUI-Transplanter/raw/static/gui-1.png)
-
 ### Command Line Interface
 Can transplant single file or batch by doing a folder. Contains multiple switches for extended operations such as exporting various types of PCC data into a useful text format, GUI file extraction, and Exec function dumping.
 
-Command line arguments are partially shared.
+#### NOTE: THESE NEED UPDATED FOR 1.0.0.15, THEY ARE OUTDATED.
 
 Required (mutually exclusive):
  * **-i/--inputfile pccfile** Path to a pcc file. Acts as the source in all operations.
