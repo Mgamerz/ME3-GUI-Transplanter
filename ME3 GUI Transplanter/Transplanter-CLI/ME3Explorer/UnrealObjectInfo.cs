@@ -9,6 +9,8 @@ namespace TransplanterLib
 {
     public static class UnrealObjectInfo
     {
+        private static Dictionary<String, PCCObject> pccMemoryCache = new Dictionary<string, PCCObject>();
+
         public enum ArrayType
         {
             Object,
@@ -278,14 +280,20 @@ namespace TransplanterLib
             {
                 bool isImmutable = ImmutableStructs.Contains(className);
                 ClassInfo info = Structs[className];
-                PCCObject importPCC;
-                try
+                String pccToLoadPath = Path.Combine(TransplanterLib.GamePath, @"BIOGame\" + info.pccPath);
+                PCCObject importPCC = null;
+                pccMemoryCache.TryGetValue(pccToLoadPath, out importPCC);
+                if (importPCC == null)
                 {
-                    importPCC = new PCCObject(Path.Combine(TransplanterLib.GamePath, @"BIOGame\" + info.pccPath));
-                }
-                catch (Exception)
-                {
-                    return null;
+                    try
+                    {
+                        importPCC = new PCCObject(pccToLoadPath);
+                        pccMemoryCache[pccToLoadPath] = importPCC;
+                    }
+                    catch (Exception)
+                    {
+                        return null;
+                    }
                 }
                 byte[] buff;
                 //Plane and CoverReference inherit from other structs, meaning they don't have default values (who knows why)
@@ -325,14 +333,23 @@ namespace TransplanterLib
             else if (Classes.ContainsKey(className))
             {
                 ClassInfo info = Structs[className];
+                String pccToLoadPath = Path.Combine(TransplanterLib.GamePath, @"BIOGame\" + info.pccPath);
                 PCCObject importPCC;
-                try
+                if (pccMemoryCache[pccToLoadPath] != null)
                 {
-                    importPCC = new PCCObject(Path.Combine(TransplanterLib.GamePath, @"BIOGame\" + info.pccPath));
+                    importPCC = pccMemoryCache[pccToLoadPath];
                 }
-                catch (Exception)
+                else
                 {
-                    return null;
+                    try
+                    {
+                        importPCC = new PCCObject(pccToLoadPath);
+                        pccMemoryCache[pccToLoadPath] = importPCC;
+                    }
+                    catch (Exception)
+                    {
+                        return null;
+                    }
                 }
                 PCCObject.ExportEntry entry = pcc.Exports[info.exportIndex + 1];
                 List<PropertyReader.Property> Props = PropertyReader.getPropList(importPCC, entry);

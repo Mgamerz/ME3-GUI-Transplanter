@@ -295,7 +295,15 @@ namespace TransplanterLib
         ///   System.ArgumentOutOfRangeException:
         ///     startIndex is less than zero or greater than the length of value minus 1.
         ///</summary>
-        public static bool ToBoolean(byte[] value, int startIndex) { throw new NotImplementedException(); }
+        public static bool ToBoolean(byte[] value, int startIndex) {
+            if (value.Length < startIndex)
+            {
+                return false; //fallback
+            } else
+            {
+                return value[startIndex] != 0;
+            }
+        }
         ///
         /// <summary>
         ///     Returns a Unicode character converted from two bytes at a specified position
