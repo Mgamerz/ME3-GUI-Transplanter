@@ -717,6 +717,8 @@ namespace MassEffectModder
         {
             namesTable = new List<NameEntry>();
             input.JumpTo(namesOffset);
+            //Console.WriteLine("Is Compressed: "+compressed);
+            //Console.WriteLine("Names Offset: 0x" + namesOffset.ToString("X8"));
             for (int i = 0; i < namesCount; i++)
             {
                 NameEntry entry = new NameEntry();
@@ -755,7 +757,7 @@ namespace MassEffectModder
                     entry.flags = input.ReadUInt64();
                 if (version == packageFileVersionME2)
                     entry.flags = input.ReadUInt32();
-
+                //Console.WriteLine(entry.name);
                 namesTable.Add(entry);
             }
             namesTableEnd = (uint)input.Position;

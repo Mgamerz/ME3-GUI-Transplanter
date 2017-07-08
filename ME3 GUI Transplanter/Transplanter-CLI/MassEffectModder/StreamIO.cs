@@ -30,8 +30,9 @@ namespace StreamHelpers
         public static byte[] ReadToBuffer(this Stream stream, int count)
         {
             byte[] buffer = new byte[count];
-            if (stream.Read(buffer, 0, count) != count)
-                throw new Exception();
+            int readamount = stream.Read(buffer, 0, count);
+            if (readamount != count)
+                throw new Exception("ReadToBuffer read data, but it was not the expected length. Expected: "+count+", got "+readamount);
             return buffer;
         }
 
