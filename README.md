@@ -1,7 +1,9 @@
+# This project has been merged into Mass Effect 3 Mod Manager Command Line. This repository is only kept for commit history.
+You can access this tool in at [the Mod Manager Command Line repository](http://github.com/mgamerz/modmanagercommandline) under Transplanter-CLI.
+
 ## Mass Effect 3 GUI Transplanter / PCC Data Dumper
 Transplants GFX files from one PCC to another in ME3, as well as dumping useful information from PCC files into text files for easy searching. Integrated into [Mass Effect 3 Mod Manager](http://github.com/mgamerz/me3modmanager) to quickly fix override conflicts between DLC mods with the Mass Effect 3 controller mods, and allow easy dumping of files for searchability.
 
-[![Download Latest Build](https://github.com/Mgamerz/ME3-GUI-Transplanter/raw/static/download-button.png)](https://github.com/Mgamerz/ME3-GUI-Transplanter/releases/latest)
 
 ---
 ### Command Line Interface
